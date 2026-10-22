@@ -1,0 +1,29 @@
+# Exclusiones para búsquedas de herramientas compatibles, como ripgrep.
+# La protección al versionar corresponde a .gitignore.
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.log
+*.tmp
+*.temp
+~$*
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.bak
+*.trn
+*.mdf
+*.ndf
+*.ldf

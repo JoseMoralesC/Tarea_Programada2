@@ -1,0 +1,40 @@
+# Dependencias y salidas de Node.js
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+
+# Secretos y configuración local; conservar plantilla sin credenciales
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Archivos temporales y registros
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tmp
+*.temp
+~$*
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+
+# Archivos físicos y respaldos locales de SQL Server
+*.bak
+*.trn
+*.mdf
+*.ndf
+*.ldf
+
+# No ignorar SQL, CSV, TXT, Excel, capturas, PDF ni Word: son entregables.
+# Conservar package-lock.json cuando se inicialice Node.js.
