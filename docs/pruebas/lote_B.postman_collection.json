@@ -1,0 +1,3453 @@
+{
+  "info": {
+    "name": "Lote B - Persona 2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Plantilla manual de CRUD de las 11 tablas. Requiere aplicar y validar SQL 03/04, cuentas restringidas y fixtures de prueba acordados. Completar referencias (IDs 0 no son validos) y credenciales solo localmente. Cada carpeta crea su propio ID y luego consulta/modifica/borra ese registro. Las FK de referencia deben existir y no son eliminadas por esta coleccion. No se ha ejecutado contra la base compartida."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/"
+    },
+    {
+      "key": "correoLogin",
+      "value": ""
+    },
+    {
+      "key": "claveLogin",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "correoUsuarioPrueba",
+      "value": ""
+    },
+    {
+      "key": "claveUsuarioPrueba",
+      "value": ""
+    },
+    {
+      "key": "idRolReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idUsuarioEmpleadoReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idUsuarioClienteReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idAseguradoraReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idModeloReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idCasoReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idCotizacionReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idRepuestoReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idVentaReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idBodegaReferencia",
+      "value": "0"
+    },
+    {
+      "key": "idRolPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idUsuarioPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idEmpleadoPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idAseguradoraPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idCasoPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idCotizacionPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idDetalleCotizacionPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idVentaPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idDetalleVentaPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idEnvioPrueba",
+      "value": "0"
+    },
+    {
+      "key": "idAuditoriaPrueba",
+      "value": "0"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Login",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($correo:String!,$clave:String!){login(correo:$correo,clave:$clave){token expiraEn usuario{idUsuario rol}}}\",\n  \"variables\": {\n    \"correo\": \"{{correoLogin}}\",\n    \"clave\": \"{{claveLogin}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($correo:String!,$clave:String!){login(correo:$correo,clave:$clave){token expiraEn usuario{idUsuario rol}}}\", \"variables\": {\"correo\": \"{{correoLogin}}\", \"clave\": \"{{claveLogin}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (r.data?.login?.token) pm.collectionVariables.set(\"token\", r.data.login.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rol",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($nombre:String!){agregarRol(nombre:$nombre)}\",\n  \"variables\": {\n    \"nombre\": \"RolPrueba\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($nombre:String!){agregarRol(nombre:$nombre)}\", \"variables\": {\"nombre\": \"RolPrueba\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarRol)) pm.collectionVariables.set(\"idRolPrueba\", r.data.agregarRol);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){roles(idRol:$id){IdRol Nombre}}\",\n  \"variables\": {\n    \"id\": \"{{idRolPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){roles(idRol:$id){IdRol Nombre}}\", \"variables\": {\"id\": \"{{idRolPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$nombre:String!){modificarRol(idRol:$id,nombre:$nombre)}\",\n  \"variables\": {\n    \"id\": \"{{idRolPrueba}}\",\n    \"nombre\": \"RolPruebaEditado\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$nombre:String!){modificarRol(idRol:$id,nombre:$nombre)}\", \"variables\": {\"id\": \"{{idRolPrueba}}\", \"nombre\": \"RolPruebaEditado\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarRol(idRol:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idRolPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarRol(idRol:$id)}\", \"variables\": {\"id\": \"{{idRolPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){roles(idRol:$id){IdRol}}\",\n  \"variables\": {\n    \"id\": \"{{idRolPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){roles(idRol:$id){IdRol}}\", \"variables\": {\"id\": \"{{idRolPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.roles).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Usuario",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:UsuarioInput!){agregarUsuario(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idRol\": \"{{idRolReferencia}}\",\n      \"correo\": \"{{correoUsuarioPrueba}}\",\n      \"clave\": \"{{claveUsuarioPrueba}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:UsuarioInput!){agregarUsuario(datos:$datos)}\", \"variables\": {\"datos\": {\"idRol\": \"{{idRolReferencia}}\", \"correo\": \"{{correoUsuarioPrueba}}\", \"clave\": \"{{claveUsuarioPrueba}}\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarUsuario)) pm.collectionVariables.set(\"idUsuarioPrueba\", r.data.agregarUsuario);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){usuarios(idUsuario:$id){IdUsuario IdRol Correo Activo}}\",\n  \"variables\": {\n    \"id\": \"{{idUsuarioPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){usuarios(idUsuario:$id){IdUsuario IdRol Correo Activo}}\", \"variables\": {\"id\": \"{{idUsuarioPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:UsuarioCambios!){modificarUsuario(idUsuario:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idUsuarioPrueba}}\",\n    \"datos\": {\n      \"activo\": false\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:UsuarioCambios!){modificarUsuario(idUsuario:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idUsuarioPrueba}}\", \"datos\": {\"activo\": false}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarUsuario(idUsuario:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idUsuarioPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarUsuario(idUsuario:$id)}\", \"variables\": {\"id\": \"{{idUsuarioPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){usuarios(idUsuario:$id){IdUsuario}}\",\n  \"variables\": {\n    \"id\": \"{{idUsuarioPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){usuarios(idUsuario:$id){IdUsuario}}\", \"variables\": {\"id\": \"{{idUsuarioPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.usuarios).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Empleado",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:EmpleadoInput!){agregarEmpleado(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idUsuario\": \"{{idUsuarioEmpleadoReferencia}}\",\n      \"cedula\": \"PRUEBA-EMP\",\n      \"nombre\": \"Empleado de prueba\",\n      \"puesto\": \"Prueba\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:EmpleadoInput!){agregarEmpleado(datos:$datos)}\", \"variables\": {\"datos\": {\"idUsuario\": \"{{idUsuarioEmpleadoReferencia}}\", \"cedula\": \"PRUEBA-EMP\", \"nombre\": \"Empleado de prueba\", \"puesto\": \"Prueba\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarEmpleado)) pm.collectionVariables.set(\"idEmpleadoPrueba\", r.data.agregarEmpleado);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){empleados(idEmpleado:$id){IdEmpleado IdUsuario Cedula Nombre Puesto}}\",\n  \"variables\": {\n    \"id\": \"{{idEmpleadoPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){empleados(idEmpleado:$id){IdEmpleado IdUsuario Cedula Nombre Puesto}}\", \"variables\": {\"id\": \"{{idEmpleadoPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:EmpleadoCambios!){modificarEmpleado(idEmpleado:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idEmpleadoPrueba}}\",\n    \"datos\": {\n      \"puesto\": \"Prueba modificada\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:EmpleadoCambios!){modificarEmpleado(idEmpleado:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idEmpleadoPrueba}}\", \"datos\": {\"puesto\": \"Prueba modificada\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarEmpleado(idEmpleado:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idEmpleadoPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarEmpleado(idEmpleado:$id)}\", \"variables\": {\"id\": \"{{idEmpleadoPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){empleados(idEmpleado:$id){IdEmpleado}}\",\n  \"variables\": {\n    \"id\": \"{{idEmpleadoPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){empleados(idEmpleado:$id){IdEmpleado}}\", \"variables\": {\"id\": \"{{idEmpleadoPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.empleados).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Aseguradora",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:AseguradoraInput!){agregarAseguradora(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idUsuario\": \"{{idUsuarioClienteReferencia}}\",\n      \"cedulaJuridica\": \"PRUEBA-ASEG\",\n      \"nombre\": \"Aseguradora de prueba\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:AseguradoraInput!){agregarAseguradora(datos:$datos)}\", \"variables\": {\"datos\": {\"idUsuario\": \"{{idUsuarioClienteReferencia}}\", \"cedulaJuridica\": \"PRUEBA-ASEG\", \"nombre\": \"Aseguradora de prueba\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarAseguradora)) pm.collectionVariables.set(\"idAseguradoraPrueba\", r.data.agregarAseguradora);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){aseguradoras(idAseguradora:$id){IdAseguradora IdUsuario CedulaJuridica Nombre Telefono Correo}}\",\n  \"variables\": {\n    \"id\": \"{{idAseguradoraPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){aseguradoras(idAseguradora:$id){IdAseguradora IdUsuario CedulaJuridica Nombre Telefono Correo}}\", \"variables\": {\"id\": \"{{idAseguradoraPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:AseguradoraCambios!){modificarAseguradora(idAseguradora:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idAseguradoraPrueba}}\",\n    \"datos\": {\n      \"telefono\": null\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:AseguradoraCambios!){modificarAseguradora(idAseguradora:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idAseguradoraPrueba}}\", \"datos\": {\"telefono\": null}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarAseguradora(idAseguradora:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idAseguradoraPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarAseguradora(idAseguradora:$id)}\", \"variables\": {\"id\": \"{{idAseguradoraPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){aseguradoras(idAseguradora:$id){IdAseguradora}}\",\n  \"variables\": {\n    \"id\": \"{{idAseguradoraPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){aseguradoras(idAseguradora:$id){IdAseguradora}}\", \"variables\": {\"id\": \"{{idAseguradoraPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.aseguradoras).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Caso",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:CasoInput!){agregarCaso(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idAseguradora\": \"{{idAseguradoraReferencia}}\",\n      \"idModelo\": \"{{idModeloReferencia}}\",\n      \"placa\": \"PRUEBA\",\n      \"estado\": \"ABIERTO\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:CasoInput!){agregarCaso(datos:$datos)}\", \"variables\": {\"datos\": {\"idAseguradora\": \"{{idAseguradoraReferencia}}\", \"idModelo\": \"{{idModeloReferencia}}\", \"placa\": \"PRUEBA\", \"estado\": \"ABIERTO\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarCaso)) pm.collectionVariables.set(\"idCasoPrueba\", r.data.agregarCaso);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){casos(idCaso:$id){IdCaso IdAseguradora IdModelo Placa Estado FechaApertura}}\",\n  \"variables\": {\n    \"id\": \"{{idCasoPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){casos(idCaso:$id){IdCaso IdAseguradora IdModelo Placa Estado FechaApertura}}\", \"variables\": {\"id\": \"{{idCasoPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:CasoCambios!){modificarCaso(idCaso:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idCasoPrueba}}\",\n    \"datos\": {\n      \"placa\": \"PRUEBA2\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:CasoCambios!){modificarCaso(idCaso:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idCasoPrueba}}\", \"datos\": {\"placa\": \"PRUEBA2\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarCaso(idCaso:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idCasoPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarCaso(idCaso:$id)}\", \"variables\": {\"id\": \"{{idCasoPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){casos(idCaso:$id){IdCaso}}\",\n  \"variables\": {\n    \"id\": \"{{idCasoPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){casos(idCaso:$id){IdCaso}}\", \"variables\": {\"id\": \"{{idCasoPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.casos).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cotizacion",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:CotizacionInput!){agregarCotizacion(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idCaso\": \"{{idCasoReferencia}}\",\n      \"estado\": \"PENDIENTE\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:CotizacionInput!){agregarCotizacion(datos:$datos)}\", \"variables\": {\"datos\": {\"idCaso\": \"{{idCasoReferencia}}\", \"estado\": \"PENDIENTE\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarCotizacion)) pm.collectionVariables.set(\"idCotizacionPrueba\", r.data.agregarCotizacion);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){cotizaciones(idCotizacion:$id){IdCotizacion IdCaso IdEmpleado Fecha Estado Total}}\",\n  \"variables\": {\n    \"id\": \"{{idCotizacionPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){cotizaciones(idCotizacion:$id){IdCotizacion IdCaso IdEmpleado Fecha Estado Total}}\", \"variables\": {\"id\": \"{{idCotizacionPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:CotizacionCambios!){modificarCotizacion(idCotizacion:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idCotizacionPrueba}}\",\n    \"datos\": {\n      \"estado\": \"APROBADA\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:CotizacionCambios!){modificarCotizacion(idCotizacion:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idCotizacionPrueba}}\", \"datos\": {\"estado\": \"APROBADA\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarCotizacion(idCotizacion:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idCotizacionPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarCotizacion(idCotizacion:$id)}\", \"variables\": {\"id\": \"{{idCotizacionPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){cotizaciones(idCotizacion:$id){IdCotizacion}}\",\n  \"variables\": {\n    \"id\": \"{{idCotizacionPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){cotizaciones(idCotizacion:$id){IdCotizacion}}\", \"variables\": {\"id\": \"{{idCotizacionPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.cotizaciones).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DetalleCotizacion",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:DetalleCotizacionInput!){agregarDetalleCotizacion(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idCotizacion\": \"{{idCotizacionReferencia}}\",\n      \"idRepuesto\": \"{{idRepuestoReferencia}}\",\n      \"cantidad\": 1,\n      \"precio\": \"1.25\",\n      \"estado\": \"PENDIENTE\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:DetalleCotizacionInput!){agregarDetalleCotizacion(datos:$datos)}\", \"variables\": {\"datos\": {\"idCotizacion\": \"{{idCotizacionReferencia}}\", \"idRepuesto\": \"{{idRepuestoReferencia}}\", \"cantidad\": 1, \"precio\": \"1.25\", \"estado\": \"PENDIENTE\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarDetalleCotizacion)) pm.collectionVariables.set(\"idDetalleCotizacionPrueba\", r.data.agregarDetalleCotizacion);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){detallesCotizacion(idDetalle:$id){IdDetalle IdCotizacion IdRepuesto Cantidad Precio Estado}}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleCotizacionPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){detallesCotizacion(idDetalle:$id){IdDetalle IdCotizacion IdRepuesto Cantidad Precio Estado}}\", \"variables\": {\"id\": \"{{idDetalleCotizacionPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:DetalleCotizacionCambios!){modificarDetalleCotizacion(idDetalle:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleCotizacionPrueba}}\",\n    \"datos\": {\n      \"cantidad\": 2\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:DetalleCotizacionCambios!){modificarDetalleCotizacion(idDetalle:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idDetalleCotizacionPrueba}}\", \"datos\": {\"cantidad\": 2}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarDetalleCotizacion(idDetalle:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleCotizacionPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarDetalleCotizacion(idDetalle:$id)}\", \"variables\": {\"id\": \"{{idDetalleCotizacionPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){detallesCotizacion(idDetalle:$id){IdDetalle}}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleCotizacionPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){detallesCotizacion(idDetalle:$id){IdDetalle}}\", \"variables\": {\"id\": \"{{idDetalleCotizacionPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.detallesCotizacion).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Venta",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:VentaInput!){agregarVenta(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idCotizacion\": \"{{idCotizacionReferencia}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:VentaInput!){agregarVenta(datos:$datos)}\", \"variables\": {\"datos\": {\"idCotizacion\": \"{{idCotizacionReferencia}}\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarVenta)) pm.collectionVariables.set(\"idVentaPrueba\", r.data.agregarVenta);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){ventas(idVenta:$id){IdVenta IdCotizacion IdEmpleado Fecha Total}}\",\n  \"variables\": {\n    \"id\": \"{{idVentaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){ventas(idVenta:$id){IdVenta IdCotizacion IdEmpleado Fecha Total}}\", \"variables\": {\"id\": \"{{idVentaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:VentaCambios!){modificarVenta(idVenta:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idVentaPrueba}}\",\n    \"datos\": {\n      \"fecha\": \"2026-10-29T18:00:00Z\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:VentaCambios!){modificarVenta(idVenta:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idVentaPrueba}}\", \"datos\": {\"fecha\": \"2026-10-29T18:00:00Z\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarVenta(idVenta:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idVentaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarVenta(idVenta:$id)}\", \"variables\": {\"id\": \"{{idVentaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){ventas(idVenta:$id){IdVenta}}\",\n  \"variables\": {\n    \"id\": \"{{idVentaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){ventas(idVenta:$id){IdVenta}}\", \"variables\": {\"id\": \"{{idVentaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.ventas).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DetalleVenta",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:DetalleVentaInput!){agregarDetalleVenta(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idVenta\": \"{{idVentaReferencia}}\",\n      \"idRepuesto\": \"{{idRepuestoReferencia}}\",\n      \"idBodega\": \"{{idBodegaReferencia}}\",\n      \"cantidad\": 1,\n      \"precio\": \"1.25\",\n      \"costo\": \"0.75\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:DetalleVentaInput!){agregarDetalleVenta(datos:$datos)}\", \"variables\": {\"datos\": {\"idVenta\": \"{{idVentaReferencia}}\", \"idRepuesto\": \"{{idRepuestoReferencia}}\", \"idBodega\": \"{{idBodegaReferencia}}\", \"cantidad\": 1, \"precio\": \"1.25\", \"costo\": \"0.75\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarDetalleVenta)) pm.collectionVariables.set(\"idDetalleVentaPrueba\", r.data.agregarDetalleVenta);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){detallesVenta(idDetalle:$id){IdDetalle IdVenta IdRepuesto IdBodega Cantidad Precio Costo}}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleVentaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){detallesVenta(idDetalle:$id){IdDetalle IdVenta IdRepuesto IdBodega Cantidad Precio Costo}}\", \"variables\": {\"id\": \"{{idDetalleVentaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:DetalleVentaCambios!){modificarDetalleVenta(idDetalle:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleVentaPrueba}}\",\n    \"datos\": {\n      \"cantidad\": 2\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:DetalleVentaCambios!){modificarDetalleVenta(idDetalle:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idDetalleVentaPrueba}}\", \"datos\": {\"cantidad\": 2}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarDetalleVenta(idDetalle:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleVentaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarDetalleVenta(idDetalle:$id)}\", \"variables\": {\"id\": \"{{idDetalleVentaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){detallesVenta(idDetalle:$id){IdDetalle}}\",\n  \"variables\": {\n    \"id\": \"{{idDetalleVentaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){detallesVenta(idDetalle:$id){IdDetalle}}\", \"variables\": {\"id\": \"{{idDetalleVentaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.detallesVenta).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Envio",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:EnvioInput!){agregarEnvio(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"idVenta\": \"{{idVentaReferencia}}\",\n      \"direccion\": \"Direccion de prueba\",\n      \"costo\": \"1.00\",\n      \"estado\": \"PENDIENTE\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:EnvioInput!){agregarEnvio(datos:$datos)}\", \"variables\": {\"datos\": {\"idVenta\": \"{{idVentaReferencia}}\", \"direccion\": \"Direccion de prueba\", \"costo\": \"1.00\", \"estado\": \"PENDIENTE\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarEnvio)) pm.collectionVariables.set(\"idEnvioPrueba\", r.data.agregarEnvio);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){envios(idEnvio:$id){IdEnvio IdVenta Direccion Costo Estado FechaEntrega}}\",\n  \"variables\": {\n    \"id\": \"{{idEnvioPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){envios(idEnvio:$id){IdEnvio IdVenta Direccion Costo Estado FechaEntrega}}\", \"variables\": {\"id\": \"{{idEnvioPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:EnvioCambios!){modificarEnvio(idEnvio:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idEnvioPrueba}}\",\n    \"datos\": {\n      \"fechaEntrega\": null\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:EnvioCambios!){modificarEnvio(idEnvio:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idEnvioPrueba}}\", \"datos\": {\"fechaEntrega\": null}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarEnvio(idEnvio:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idEnvioPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarEnvio(idEnvio:$id)}\", \"variables\": {\"id\": \"{{idEnvioPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){envios(idEnvio:$id){IdEnvio}}\",\n  \"variables\": {\n    \"id\": \"{{idEnvioPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){envios(idEnvio:$id){IdEnvio}}\", \"variables\": {\"id\": \"{{idEnvioPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.envios).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auditoria",
+      "item": [
+        {
+          "name": "Agregar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($datos:AuditoriaInput!){agregarAuditoria(datos:$datos)}\",\n  \"variables\": {\n    \"datos\": {\n      \"tabla\": \"PruebaAcademica\",\n      \"accion\": \"INSERTAR\",\n      \"usuario\": \"PruebaAdministrativa\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($datos:AuditoriaInput!){agregarAuditoria(datos:$datos)}\", \"variables\": {\"datos\": {\"tabla\": \"PruebaAcademica\", \"accion\": \"INSERTAR\", \"usuario\": \"PruebaAdministrativa\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (Number.isInteger(r.data?.agregarAuditoria)) pm.collectionVariables.set(\"idAuditoriaPrueba\", r.data.agregarAuditoria);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){auditorias(idAuditoria:$id){IdAuditoria Tabla Accion Usuario Fecha}}\",\n  \"variables\": {\n    \"id\": \"{{idAuditoriaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){auditorias(idAuditoria:$id){IdAuditoria Tabla Accion Usuario Fecha}}\", \"variables\": {\"id\": \"{{idAuditoriaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!,$datos:AuditoriaCambios!){modificarAuditoria(idAuditoria:$id,datos:$datos)}\",\n  \"variables\": {\n    \"id\": \"{{idAuditoriaPrueba}}\",\n    \"datos\": {\n      \"accion\": \"MODIFICAR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!,$datos:AuditoriaCambios!){modificarAuditoria(idAuditoria:$id,datos:$datos)}\", \"variables\": {\"id\": \"{{idAuditoriaPrueba}}\", \"datos\": {\"accion\": \"MODIFICAR\"}}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation($id:Int!){borrarAuditoria(idAuditoria:$id)}\",\n  \"variables\": {\n    \"id\": \"{{idAuditoriaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation($id:Int!){borrarAuditoria(idAuditoria:$id)}\", \"variables\": {\"id\": \"{{idAuditoriaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobar ausencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query($id:Int!){auditorias(idAuditoria:$id){IdAuditoria}}\",\n  \"variables\": {\n    \"id\": \"{{idAuditoriaPrueba}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"query($id:Int!){auditorias(idAuditoria:$id){IdAuditoria}}\", \"variables\": {\"id\": \"{{idAuditoriaPrueba}}\"}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "pm.test(\"Registro ausente\", () => pm.expect(r.data?.auditorias).to.deep.equal([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cerrar sesion",
+      "item": [
+        {
+          "name": "Cerrar sesion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation{cerrarSesion}\",\n  \"variables\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {\"query\": \"mutation{cerrarSesion}\", \"variables\": {}};",
+                  "function resolve(value) {",
+                  "  if (Array.isArray(value)) return value.map(resolve);",
+                  "  if (value && typeof value === \"object\") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,resolve(v)]));",
+                  "  if (typeof value !== \"string\") return value;",
+                  "  const match = /^\\{\\{(\\w+)\\}\\}$/.exec(value);",
+                  "  if (!match) return value;",
+                  "  const stored = pm.variables.get(match[1]);",
+                  "  return match[1].startsWith(\"id\") ? Number(stored) : String(stored ?? \"\");",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({query: payload.query, variables: resolve(payload.variables)}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin errores GraphQL\", () => pm.expect(r.errors).to.be.undefined);",
+                  "if (r.data?.cerrarSesion) pm.collectionVariables.set(\"token\", \"\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

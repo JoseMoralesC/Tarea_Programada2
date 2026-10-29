@@ -1,0 +1,32 @@
+{
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "graphql": "^16.14.2",
+    "mssql": "^12.7.13"
+  },
+  "name": "tarea_programada2",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Proyecto universitario del curso **TI-156 Bases de datos avanzadas, III Cuatrimestre de 2026**, desarrollado por dos compañeros identificados como **persona 1** y **persona 2**. Continúa el proyecto 1 y prepara el backend para una futura aplicación web.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "verify:hash": "node --env-file=.env scripts/verificar-hash.mjs",
+    "start": "node --env-file=.env src/index.js",
+    "dev": "node --env-file=.env --watch src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoseMoralesC/Tarea_Programada2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JoseMoralesC/Tarea_Programada2/issues"
+  },
+  "homepage": "https://github.com/JoseMoralesC/Tarea_Programada2#readme"
+}
