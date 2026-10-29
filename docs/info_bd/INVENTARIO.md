@@ -1,6 +1,6 @@
 # Inventario de RepuestosAutomotrices
 
-Actualizado el **22/10/2026**; completado por Persona 1 el **26/10/2026** (columnas, triggers y lotes A/B; consultas en [inventario.sql](inventario.sql), versión visual en [Inventario_RepuestosAutomotrices.pdf](Inventario_RepuestosAutomotrices.pdf)). Base oficial confirmada por el usuario. El script compartido identifica 23 tablas, 34 SP, 13 triggers y 32 claves foráneas. La revisión del servidor confirmó tablas, SP, triggers y dependencias técnicas. Ver [Base de datos oficial](BASE_DATOS.md).
+Actualizado el **22/10/2026**. Base oficial confirmada por el usuario. El script compartido identifica 23 tablas, 34 SP, 13 triggers y 32 claves foráneas. La revisión del servidor confirmó tablas, SP, triggers y dependencias técnicas. Ver [Base de datos oficial](BASE_DATOS.md).
 
 El inventario es una referencia heredada: no acredita APIs GraphQL, cargas con SSMS/bcp ni permisos por rol ya terminados. Columnas, parámetros y resultados completos deben revisarse en F1. Las cantidades son una fotografía de los datos preexistentes del 22/10/2026.
 
@@ -18,7 +18,7 @@ El inventario es una referencia heredada: no acredita APIs GraphQL, cargas con S
 | Seguridad | Matriz cliente/empleado pendiente; DB_SETUP solo mantenimiento |
 | Login | SP LoginUsuario y ObtenerCredencialLogin presentes; integración y cuenta mínima por definir |
 | Rol genérico | Desactivado hasta justificar su necesidad |
-| Zona de entrega | America/Costa_Rica (UTC-6), por confirmar con el curso |
+| Zona de entrega | Confirmar con el curso; provisional America/Mexico_City |
 | Cargas | Las realizará el usuario/equipo con archivos y evidencia reales |
 
 ## 1. Tablas, claves y dependencias
@@ -52,58 +52,6 @@ El nivel indicado solo expresa el orden topológico de las FK. **No es una instr
 | dbo.Venta | IdVenta | IdCotizacion → Cotizacion; IdEmpleado → Empleado | Sí | 6 | 3 |
 
 Total de filas de referencia: **105**, ya existentes; no fueron cargadas por esta asistencia. RepuestoModelo tiene PK compuesta (IdRepuesto, IdModelo). Inventario dispone de unicidad por bodega/repuesto.
-
-### 1.1 Columnas y tipos
-
-Obtenido con la consulta 1 de [inventario.sql](inventario.sql) el 26/10/2026. `NULL` indica columna opcional; el resto es obligatoria. Se excluye `sysdiagrams`, creada por SSMS para diagramas.
-
-| Tabla | Columnas |
-| --- | --- |
-| Aseguradora | IdAseguradora int, IdUsuario int, CedulaJuridica varchar(20), Nombre nvarchar(100), Telefono varchar(15) NULL, Correo varchar(100) NULL |
-| Auditoria | IdAuditoria int, Tabla varchar(50), Accion char(1), Usuario varchar(100), Fecha datetime |
-| Bodega | IdBodega int, Nombre nvarchar(60), Ubicacion nvarchar(150) |
-| Caso | IdCaso int, IdAseguradora int, IdModelo int, Placa varchar(10), Estado varchar(20), FechaApertura datetime |
-| Categoria | IdCategoria int, Nombre nvarchar(60) |
-| Compra | IdCompra int, IdProveedor int, IdBodega int, Fecha date, FechaRecepcion date NULL, Total decimal(12,2) |
-| Cotizacion | IdCotizacion int, IdCaso int, IdEmpleado int, Fecha datetime, Estado varchar(15), Total decimal(12,2) |
-| DetalleCompra | IdDetalle int, IdCompra int, IdRepuesto int, Cantidad int, Costo decimal(10,2) |
-| DetalleCotizacion | IdDetalle int, IdCotizacion int, IdRepuesto int, Cantidad int, Precio decimal(10,2), Estado varchar(15) |
-| DetalleVenta | IdDetalle int, IdVenta int, IdRepuesto int, IdBodega int, Cantidad int, Precio decimal(10,2), Costo decimal(10,2) |
-| Empleado | IdEmpleado int, IdUsuario int, Cedula varchar(20), Nombre nvarchar(100), Puesto nvarchar(50) |
-| Envio | IdEnvio int, IdVenta int, Direccion nvarchar(200), Costo decimal(10,2), Estado varchar(15), FechaEntrega datetime NULL |
-| Incidencia | IdIncidencia int, IdRepuesto int, IdProveedor int, IdCompra int NULL, Tipo varchar(20), Cantidad int, Fecha datetime |
-| Inventario | IdInventario int, IdBodega int, IdRepuesto int, Cantidad int |
-| Marca | IdMarca int, Nombre nvarchar(50) |
-| Modelo | IdModelo int, IdMarca int, Nombre nvarchar(60), AnioInicio int, AnioFin int NULL |
-| Movimiento | IdMovimiento int, IdRepuesto int, IdBodegaOrigen int NULL, IdBodegaDestino int NULL, IdEmpleado int, Tipo varchar(15), Cantidad int, Fecha datetime |
-| Proveedor | IdProveedor int, Nombre nvarchar(100), Telefono varchar(15) NULL, Correo varchar(100) NULL, DiasEntrega int |
-| Repuesto | IdRepuesto int, IdCategoria int, Codigo varchar(30), Nombre nvarchar(120), PrecioVenta decimal(10,2), Costo decimal(10,2), Activo bit |
-| RepuestoModelo | IdRepuesto int, IdModelo int |
-| Rol | IdRol int, Nombre varchar(30) |
-| Usuario | IdUsuario int, IdRol int, Correo varchar(100), Contrasena varchar(255), Activo bit |
-| Venta | IdVenta int, IdCotizacion int, IdEmpleado int, Fecha datetime, Total decimal(12,2) |
-
-### 1.2 Triggers y efecto en la carga
-
-Obtenido con la consulta 4 de [inventario.sql](inventario.sql). La función se deduce del nombre y debe confirmarse leyendo cada trigger antes de la carga.
-
-| Trigger | Tabla | Función | Efecto en la carga masiva |
-| --- | --- | --- | --- |
-| TR_Usuario_Auditoria | Usuario | Registra cambios en Auditoria | Agrega filas a Auditoria si se dispara |
-| TR_Usuario_ValidarPerfil | Usuario | Valida datos del perfil | Puede rechazar filas inválidas |
-| TR_Empleado_ValidarRol | Empleado | Valida rol empleado del usuario | El IdUsuario del archivo debe tener rol empleado |
-| TR_Aseguradora_ValidarRol | Aseguradora | Valida rol cliente del usuario | El IdUsuario del archivo debe tener rol cliente |
-| TR_Repuesto_Auditoria | Repuesto | Registra cambios en Auditoria | Agrega filas a Auditoria si se dispara |
-| TR_Inventario_Auditoria | Inventario | Registra cambios en Auditoria | Agrega filas a Auditoria si se dispara |
-| TR_Compra_ValidarBodega | Compra | Valida la bodega de la compra | Puede rechazar filas inválidas |
-| TR_DetalleCompra_Total | DetalleCompra | Recalcula Compra.Total | Sin disparo, el Total del archivo debe cuadrar |
-| TR_DetalleCompra_Inventario | DetalleCompra | Suma existencias | Con disparo, Inventario cambia |
-| TR_DetalleCotizacion_Total | DetalleCotizacion | Recalcula Cotizacion.Total | Sin disparo, el Total del archivo debe cuadrar |
-| TR_DetalleVenta_Total | DetalleVenta | Recalcula Venta.Total | Sin disparo, el Total del archivo debe cuadrar |
-| TR_DetalleVenta_Inventario | DetalleVenta | Resta existencias | Con disparo, Inventario cambia y puede quedar sin stock |
-| TR_Movimiento_Inventario | Movimiento | Mueve existencias entre bodegas | Con disparo, Inventario cambia |
-
-El asistente de SSMS y bcp no disparan triggers por defecto; bcp los activa con `-h "FIRE_TRIGGERS"`.
 
 ## 2. Mapeo CRUD preliminar a procedimientos
 
@@ -250,31 +198,15 @@ Ninguna fila preexistente acredita por sí misma la importación del proyecto. C
 | Usuario | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
 | Venta | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
 
-### Propuesta de estrategia de carga (Persona 1, pendiente de acuerdo)
-
-1. **Datos existentes:** vaciar las 105 filas y recargar todo desde archivos, incluidos los registros actuales, para que la evidencia muestre la carga completa de cada tabla.
-2. **Identity:** usar "Enable identity insert" en el asistente SSMS o `-E` en bcp, para que los IDs de los archivos coincidan con las FK.
-3. **Triggers:** cargar sin dispararlos, con Inventario y los Total ya conciliados en los archivos; así no se duplican existencias ni totales.
-4. **Roles:** en el archivo de Usuario, los usuarios de Empleado tienen rol empleado y los de Aseguradora rol cliente.
-5. **Contraseñas:** ninguna contraseña real en los archivos; usar el formato que espera LoginUsuario.
-6. **Orden:** respetar los niveles de la sección 1; Auditoria al final.
-
 ## 5. Asignación equilibrada
 
 Presupuesto: **48 puntos por persona**, según [ROADMAP.md](../roadmap/ROADMAP.md). La cantidad de tablas no determina por sí sola el esfuerzo; ponderar carga (1–3), SP/CRUD (1–5), pruebas/evidencia (1–3), más tareas transversales y revisión. Los pesos comparativos no se suman a los 96 puntos del calendario.
 
 | Paquete/tabla/subtarea | Carga 1–3 | SP/CRUD 1–5 | Pruebas/evidencia 1–3 | Total | Responsable | Revisor |
 | --- | ---: | ---: | ---: | ---: | --- | --- |
-| Lote A (catálogo, inventario y compras): Categoria, Marca, Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia, Movimiento | — | — | — | 12 tablas · 17 FK · 6 triggers · 48 CRUD | Persona 1 | Persona 2 |
-| Lote B (usuarios, clientes, cotizaciones y ventas): Rol, Usuario, Empleado, Aseguradora, Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio, Auditoria | — | — | — | 11 tablas · 15 FK · 7 triggers · 44 CRUD | Persona 2 | Persona 1 |
+| Por asignar después de revisar contratos y seguridad | — | — | — | — | — | — |
 
-Propuesta de lotes por dominio elaborada por Persona 1 el 26/10/2026, **pendiente de aprobación de Persona 2**. El lote B incluye Rol y Usuario porque coincide con la tarea de seguridad y login de Persona 2. La diferencia de una tabla se compensa con que el lote A tiene más FK y tablas de inventario.
-
-Dependencias cruzadas que obligan a coordinar la carga:
-
-- Movimiento (A) necesita Empleado (B).
-- Caso (B) necesita Modelo (A); DetalleCotizacion y DetalleVenta (B) necesitan Repuesto y Bodega (A).
-- Secuencia: A carga Categoria, Marca, Bodega, Proveedor, Modelo, Repuesto, RepuestoModelo, Inventario y Compra → B carga Rol, Usuario, Empleado y Aseguradora → A carga DetalleCompra, Incidencia y Movimiento → B carga Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio y Auditoria.
+Lotes A/B pendientes. No dar por cerrada F1 solo por disponer de los nombres de las tablas.
 
 ## 6. Trazabilidad del paquete final
 
