@@ -1,73 +1,83 @@
 # Tarea Programada 2 — Bases de datos avanzadas
 
-Proyecto universitario del curso **TI-156 Bases de datos avanzadas, III Cuatrimestre de 2026**, desarrollado por dos compañeros identificados como **persona 1** y **persona 2**. Continúa el proyecto 1 y prepara el backend para una futura aplicación web.
+Backend GraphQL de repuestos automotrices para TI-156, III Cuatrimestre de 2026. Usa Node.js, Apollo Server y mssql para ejecutar procedimientos almacenados en SQL Server sobre RepuestosAutomotrices.
 
-El proyecto comprende la carga masiva de todas las tablas con **SSMS y bcp**, y servicios **GraphQL en Node.js** que ejecutan procedimientos almacenados en **SQL Server**. Desde el **22 de octubre de 2026**, la base oficial es **`RepuestosAutomotrices`**, accesible mediante Tailscale. El nombre de la carpeta y del proyecto académico sigue siendo Tarea Programada 2.
+## Instalación y ejecución
 
-## Estado actual — 22/10/2026
-
-Se analizó el enunciado y se adoptó la base existente de repuestos automotrices: **23 tablas, 34 procedimientos almacenados y 13 triggers**, con 105 filas preexistentes según el diagnóstico del 22/10/2026. El dominio comprende catálogo, compras, inventario por bodega, aseguradoras, casos, cotizaciones, ventas y envíos.
-
-La conexión de mantenimiento quedó validada, al igual que la secuencia de códigos y el ensamblado/función CLR de autenticación. La secuencia ya existía en el servidor; el script idempotente la conservó y no fue necesario crear objetos. **No se realizaron cargas ni cambios en registros.** Los datos existentes no acreditan todavía la carga académica con SSMS y bcp; esa ejecución queda a cargo del usuario/equipo.
-
-**El backend GraphQL aún no está implementado.** La referencia inicial es de al menos 92 operaciones CRUD para las 23 tablas, más autenticación y consultas adicionales. Siguen pendientes la separación de cuentas/permisos por rol, los ajustes funcionales de procedimientos y las evidencias de carga. La decisión y el estado técnico están registrados en [Base de datos oficial](docs/info_bd/BASE_DATOS.md).
-
-## Documentación
-
-| Archivo | Contenido |
-| --- | --- |
-| [Enunciado original](docs/requeriemientos/Tarea%20programada%202.pdf) | Fuente oficial de requisitos; se conserva la ruta original. |
-| [Análisis](docs/analisis/ANALISIS_REQUERIMIENTOS.md) | Requisitos por página, alcance, arquitectura propuesta, riesgos y aceptación. |
-| [Roadmap](docs/roadmap/ROADMAP.md) | Fases, dependencias y reparto de 48 puntos por persona. |
-| [Progreso](docs/markdowns/PROGRESO.md) | Actividades, responsables, métricas y checklist final. |
-| [Inventario](docs/info_bd/INVENTARIO.md) | Matrices por tabla, procedimiento, operación, permiso y evidencia. |
-| [Plantilla de evidencias](docs/PLANTILLA_EVIDENCIAS.md) | Base para redactar el Word o PDF obligatorio. |
-| [Base de datos oficial](docs/info_bd/BASE_DATOS.md) | Decisión de adoptar RepuestosAutomotrices, verificación y ajustes pendientes. |
-
-## Conexión y configuración
-
-El archivo `.env` local ya está creado con los datos conocidos:
-
-| Parámetro | Valor |
-| --- | --- |
-| Servidor | `100.124.109.126` |
-| Puerto TCP | `15002` |
-| Base de datos | `RepuestosAutomotrices` |
-| Destino en SSMS/bcp | `100.124.109.126,15002` |
-
-Cada compañero debe mantener su propio `.env`. `DB_CLIENT_*` y `DB_EMPLOYEE_*` corresponden a las identidades SQL de cliente y empleado de la aplicación, independientemente de quién desarrolla el código. `DB_SETUP_*` es una cuenta separada de mantenimiento; no debe utilizarse como conexión habitual de la API. La conexión de mantenimiento ya fue comprobada desde este equipo. Las credenciales de empleado y la matriz de permisos siguen pendientes; no se ha validado el funcionamiento por ambos roles ni desde ambos equipos.
-
-Si una contraseña contiene `#`, debe ir entre comillas para evitar que Node.js la interprete parcialmente como comentario. `.env.example` contiene únicamente campos vacíos para las credenciales.
-
-Si un compañero no tiene `.env`, puede crear uno desde PowerShell sin sobrescribir uno existente:
+Requiere Node.js 22 o posterior y acceso al servidor SQL por la red acordada con el equipo.
 
 ```powershell
+npm ci
+# Solo si todavía no existe .env:
 Copy-Item -LiteralPath .env.example -Destination .env -ErrorAction Stop -NoClobber
+# Completar las variables locales antes de iniciar:
+npm start
 ```
 
-No guardar contraseñas en documentación ni capturas. `.gitignore` excluye `.env`; `.env.example` sí se comparte. `.ignore` excluye archivos locales de búsquedas compatibles y no sustituye a `.gitignore`. Esta carpeta todavía no tiene un repositorio Git inicializado.
+La API se sirve en http://localhost:4000/ por defecto. `npm run dev` activa la recarga al editar código; `npm test` ejecuta las pruebas locales sin SQL Server.
 
-El backend deberá convertir `DB_PORT` a número y las opciones booleanas comparando con la cadena `"true"`. No usar `Boolean("false")`. Deberá construir un pool independiente por rol usando el servidor y la base comunes. `DB_GENERIC_ENABLED=false` mantiene desactivado el acceso genérico hasta justificarlo por el dominio. Para este servidor se acordó `DB_ENCRYPT=true` y `DB_TRUST_SERVER_CERTIFICATE=true`: la conexión va cifrada y confía en el certificado presentado, sin validar su cadena. Tailscale no determina por sí mismo las opciones TLS de SQL Server.
+Completar en .env el servidor, puerto, base y credenciales SQL distintas para cliente y empleado. DB_SETUP es solo mantenimiento. Las contraseñas que contienen # deben ir entre comillas. .env, node_modules y archivos temporales están excluidos de Git; .env.example se comparte sin credenciales. La API abre las conexiones cuando las necesita: el arranque HTTP no acredita acceso a SQL.
 
-Los scripts de mantenimiento utilizan Node.js y el `sqlcmd` instalado. El diagnóstico lee metadatos y conteos; la validación ejecuta además el verificador CLR sin devolver hashes ni autenticar una cuenta:
+## Estado del proyecto — 29/10/2026
+
+- Modelo identificado: 23 tablas; cobertura prevista de al menos 92 operaciones CRUD, más autenticación.
+- Persona 1, lote A: Categoría y Marca implementadas (8 operaciones); faltan diez módulos.
+- Persona 2, lote B: los once módulos están implementados (44 operaciones), con login, sesiones, conexiones por rol y autorización.
+- Total declarado y verificado con SQL simulado: 52/92 operaciones; 39 pruebas automatizadas aprobadas.
+- El usuario aplicó SQL 03/04. Se comprobaron sus 22 definiciones/parámetros y once consultas de solo lectura, sin exponer columnas de credenciales.
+- El generador de contraseñas se comprobó contra el CLR real con una clave ficticia correcta y otra incorrecta.
+
+La implementación y las pruebas locales no acreditan todavía los ciclos CRUD reales, aislamiento entre clientes, inventario, totales o concurrencia.
+
+## Documentación y herramientas
+
+| Archivo | Uso |
+| --- | --- |
+| [Guía API](docs/API.md) | Configuración, login, permisos, operaciones y pruebas. |
+| [Estado frente al requerimiento](docs/ESTADO_PROYECTO.md) | Evidencia y pendientes de ambas personas frente al PDF y al roadmap. |
+| [Roadmap](docs/roadmap/ROADMAP.md) | Plan de fases, responsables y puntos; sus estados iniciales son históricos. |
+| [Inventario](docs/info_bd/INVENTARIO.md) | Tablas, columnas, relaciones, triggers y reparto por lote. |
+| [Colección Postman](docs/pruebas/lote_B.postman_collection.json) | 44 operaciones B, login/logout y comprobaciones de ausencia; sin credenciales reales. |
+| [Enunciado original](docs/requeriemientos/Tarea%20programada%202.pdf) | Requisitos académicos. |
+| [Plantilla de evidencias](docs/PLANTILLA_EVIDENCIAS.md) | Preparación del documento Word/PDF de carga. |
+
+Los módulos viven en src/modules, la autenticación en src/auth y la composición del esquema en src/server.js. Los tests están en test/.
+
+## Scripts SQL
+
+Conservar los scripts aunque estén aplicados para que el equipo pueda reproducir los ajustes. Requieren la estructura heredada del proyecto 1; no son una creación completa de la base.
+
+| Archivo | Función / estado |
+| --- | --- |
+| [Ajustes lote A](scripts/Nuevos_Y_Modificacion_SP.sql) | Consultas y mantenimientos de persona 1; aplicación reportada por el compañero, pendiente de revisión integral. |
+| [03: usuarios y perfiles](sql/ajustes/03_lote_B_usuarios_procedimientos.sql) | Aplicado y contrastado con el servidor. |
+| [04: negocio y auditoría](sql/ajustes/04_lote_B_negocio_procedimientos.sql) | Aplicado y contrastado con el servidor. |
+| [Completar dependencias](sql/completar_dependencias.sql) | Crea la secuencia de códigos únicamente si falta; en el servidor verificado ya existía. |
+| [Diagnóstico](sql/diagnostico_dependencias.sql) | Lectura de metadatos, conteos y permisos. |
+| [Validación](sql/validar_dependencias.sql) | Comprueba dependencias y ejecuta el verificador CLR sin modificar datos. |
+| [Inventario SQL](docs/info_bd/script_InventarioBD.sql) | Consulta columnas, FK, procedimientos y triggers. |
+
+Las herramientas de dependencias usan sqlcmd instalado y las credenciales DB_SETUP locales:
 
 ```powershell
 node --env-file=.env scripts/dependencias-db.mjs diagnostico
 node --env-file=.env scripts/dependencias-db.mjs validar
+npm run verify:hash
 ```
 
-El modo `aplicar` se reserva para completar la secuencia si falta en una instalación del mismo modelo. En el servidor actual no hizo cambios porque la secuencia ya estaba presente. No hay scripts de carga automática en estas herramientas.
+verify:hash comprueba el generador con una clave ficticia mediante el CLR, sin consultar hashes almacenados ni modificar registros. Ninguna de estas herramientas realiza cargas masivas.
 
-## Desarrollo previsto
+## Pendientes
 
-Se utilizará Node.js con GraphQL y un cliente SQL Server capaz de ejecutar procedimientos almacenados; se propone `mssql`. La versión de Node.js y las dependencias se fijarán al iniciar la implementación. No existen todavía `package.json`, scripts de npm ni un servidor que se pueda arrancar.
-
-El flujo previsto es: solicitud GraphQL → identidad y rol verificados → operación autorizada → pool del rol → procedimiento almacenado → respuesta. Cada tabla deberá tener operaciones de agregar, modificar, borrar y consultar. No basta con una API de ejemplo.
-
-La carga masiva debe realizarse con las herramientas exigidas en el curso, aunque Node.js ayude a preparar o validar archivos. No se incluye frontend en este avance.
+1. Completar/verificar las credenciales de empleado y restringir permisos SQL por rol. En la última comprobación la cuenta cliente tenía db_owner y las credenciales de empleado estaban incompletas.
+2. Ejecutar ciclos CRUD reales en una base de pruebas: entradas inválidas, FK, dos clientes, stock, totales, rollback y concurrencia. Repetir desde ambos equipos.
+3. Completar los diez módulos A: Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia y Movimiento. Revisar ambos lotes entre compañeros.
+4. Realizar la carga masiva con SSMS y bcp, conservar originales y obtener evidencia por tabla. Acordar el efecto de triggers antes de importar para evitar doble contabilización.
+5. Preparar la exportación SSMS con estructura/datos, el Word/PDF de evidencias, los archivos de carga y el código reproducible.
+6. Confirmar con el docente la interpretación de API por tabla y la zona horaria de entrega. El reparto por lotes es el del inventario; su equilibrio y la revisión cruzada se acuerdan entre ambos.
 
 ## Entrega académica
 
-El PDF indica **miércoles 4 de noviembre de 2026, a más tardar las 9:00 a. m.**, en el directorio **“entregable Proyecto 2”** del canal del grupo en Teams. La funcionalidad se prueba en clase y el código se revisa después. El enunciado no especifica zona horaria: confirmar la del curso; el calendario del roadmap usa provisionalmente `America/Mexico_City`.
+El enunciado indica miércoles 4 de noviembre de 2026, a más tardar las 9:00 a. m., en “entregable Proyecto 2” de Teams. No especifica zona horaria. La funcionalidad se prueba en clase y luego se revisa el código. El objetivo interno es tener el paquete revisado el 3 de noviembre.
 
-Deben entregarse el script generado desde SSMS con **estructura y datos**, el documento Word o PDF de evidencias por tabla, los archivos originales de carga y el código de todas las APIs. El objetivo interno es dejar el paquete revisado el **3 de noviembre**.
+Entregar: script generado desde SSMS con estructura y datos, documento Word/PDF con evidencia de carga por tabla, archivos originales de carga y código de todas las APIs. La plantilla Markdown y los datos preexistentes no sustituyen la evidencia real.

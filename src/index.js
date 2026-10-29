@@ -1,23 +1,19 @@
-import {ApolloServer} from '@apollo/server';
 import {startStandaloneServer} from '@apollo/server/standalone';
-import {config} from './config.js'; 
-import * as categoria from './modules/categoria.js';
-import * as marca from './modules/marca.js'
+import {cargarConfig} from './config.js';
+import {crearGestorPools} from './db.js';
+import {crearServidor} from './server.js';
 
-//tipos de base 
-const base = `#graphql
-    type Query {_vacio: Boolean}
-    type Mutation {_vacio: Boolean}
-`;
-//lista de modulos 
-const modulos = [categoria,marca];
+const config = cargarConfig();
+const gestor = crearGestorPools(config);
+const {server, context} = crearServidor({...gestor, ...config});
 
-
-const server = new ApolloServer({
-    typeDefs: [base, ...modulos.map((m) => m.typeDefs)],
-    resolvers: modulos.map((m) => m.resolvers),
-});
-const {url} = await startStandaloneServer(server, {listen: {port: config.puerto}});
-console.log(`Servidor GraphQL listo en ${url}`);
-
-
+try {
+    const {url} = await startStandaloneServer(server, {
+        listen: {port: config.puerto},
+        context,
+    });
+    console.log(`Servidor GraphQL listo en ${url}`);
+} catch (error) {
+    await gestor.cerrarPools();
+    throw error;
+}

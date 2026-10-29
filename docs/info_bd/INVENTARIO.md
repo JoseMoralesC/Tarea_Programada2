@@ -1,25 +1,8 @@
 # Inventario de RepuestosAutomotrices
 
-Actualizado el **22/10/2026**; completado por Persona 1 el **26/10/2026** (columnas, triggers y lotes A/B; consultas en [inventario.sql](inventario.sql), versión visual en [Inventario_RepuestosAutomotrices.pdf](Inventario_RepuestosAutomotrices.pdf)). Base oficial confirmada por el usuario. El script compartido identifica 23 tablas, 34 SP, 13 triggers y 32 claves foráneas. La revisión del servidor confirmó tablas, SP, triggers y dependencias técnicas. Ver [Base de datos oficial](BASE_DATOS.md).
+Modelo heredado de 23 tablas. Las columnas y relaciones se inventariaron el 26/10/2026; los conteos de filas corresponden al 22/10/2026 y no acreditan una carga académica. Los 34 SP originales son una referencia anterior a los ajustes posteriores, no el total actual.
 
-El inventario es una referencia heredada: no acredita APIs GraphQL, cargas con SSMS/bcp ni permisos por rol ya terminados. Columnas, parámetros y resultados completos deben revisarse en F1. Las cantidades son una fotografía de los datos preexistentes del 22/10/2026.
-
-## Decisiones de alcance
-
-| Decisión | Estado |
-| --- | --- |
-| Base y conexión | RepuestosAutomotrices; 100.124.109.126:15002 por Tailscale |
-| Dominio | Repuestos, inventario, compras, aseguradoras, casos, cotizaciones, ventas y envíos |
-| Continuidad con proyecto 1 | Confirmar alcance académico del modelo heredado |
-| Tablas N | 23; mínimo previsto: 92 operaciones CRUD GraphQL |
-| API por tabla | Módulos en un servicio GraphQL; confirmar interpretación con docente |
-| Desarrollo | Node.js; bibliotecas y versión del backend por fijar |
-| Dependencias técnicas | Secuencia y CLR presentes; verificación satisfactoria |
-| Seguridad | Matriz cliente/empleado pendiente; DB_SETUP solo mantenimiento |
-| Login | SP LoginUsuario y ObtenerCredencialLogin presentes; integración y cuenta mínima por definir |
-| Rol genérico | Desactivado hasta justificar su necesidad |
-| Zona de entrega | America/Costa_Rica (UTC-6), por confirmar con el curso |
-| Cargas | Las realizará el usuario/equipo con archivos y evidencia reales |
+El estado vigente del código y los pendientes están en el [README](../../README.md); los contratos y permisos de la API, en [API.md](../API.md). SQL 03/04 fue aplicado por el usuario y se verificaron sus 22 procedimientos/parámetros y once consultas de solo lectura el 29/10/2026. Faltan ciclos CRUD reales y permisos restringidos.
 
 ## 1. Tablas, claves y dependencias
 
@@ -55,7 +38,7 @@ Total de filas de referencia: **105**, ya existentes; no fueron cargadas por est
 
 ### 1.1 Columnas y tipos
 
-Obtenido con la consulta 1 de [inventario.sql](inventario.sql) el 26/10/2026. `NULL` indica columna opcional; el resto es obligatoria. Se excluye `sysdiagrams`, creada por SSMS para diagramas.
+Obtenido con la consulta 1 de [script_InventarioBD.sql](script_InventarioBD.sql) el 26/10/2026. `NULL` indica columna opcional; el resto es obligatoria. Se excluye `sysdiagrams`, creada por SSMS para diagramas.
 
 | Tabla | Columnas |
 | --- | --- |
@@ -85,13 +68,13 @@ Obtenido con la consulta 1 de [inventario.sql](inventario.sql) el 26/10/2026. `N
 
 ### 1.2 Triggers y efecto en la carga
 
-Obtenido con la consulta 4 de [inventario.sql](inventario.sql). La función se deduce del nombre y debe confirmarse leyendo cada trigger antes de la carga.
+Obtenido con la consulta 4 de [script_InventarioBD.sql](script_InventarioBD.sql). Los contratos y triggers del lote B se contrastaron con el servidor el 29/10/2026. Revisar el resto antes de la carga.
 
 | Trigger | Tabla | Función | Efecto en la carga masiva |
 | --- | --- | --- | --- |
 | TR_Usuario_Auditoria | Usuario | Registra cambios en Auditoria | Agrega filas a Auditoria si se dispara |
 | TR_Usuario_ValidarPerfil | Usuario | Valida datos del perfil | Puede rechazar filas inválidas |
-| TR_Empleado_ValidarRol | Empleado | Valida rol empleado del usuario | El IdUsuario del archivo debe tener rol empleado |
+| TR_Empleado_ValidarRol | Empleado | Valida rol empleado del usuario | El usuario debe tener rol Administrador/Empleado |
 | TR_Aseguradora_ValidarRol | Aseguradora | Valida rol cliente del usuario | El IdUsuario del archivo debe tener rol cliente |
 | TR_Repuesto_Auditoria | Repuesto | Registra cambios en Auditoria | Agrega filas a Auditoria si se dispara |
 | TR_Inventario_Auditoria | Inventario | Registra cambios en Auditoria | Agrega filas a Auditoria si se dispara |
@@ -103,205 +86,57 @@ Obtenido con la consulta 4 de [inventario.sql](inventario.sql). La función se d
 | TR_DetalleVenta_Inventario | DetalleVenta | Resta existencias | Con disparo, Inventario cambia y puede quedar sin stock |
 | TR_Movimiento_Inventario | Movimiento | Mueve existencias entre bodegas | Con disparo, Inventario cambia |
 
-El asistente de SSMS y bcp no disparan triggers por defecto; bcp los activa con `-h "FIRE_TRIGGERS"`.
+Antes de importar, comprobar si la herramienta dispara triggers y cómo se concilian existencias, totales y auditoría.
 
-## 2. Mapeo CRUD preliminar a procedimientos
+## 2. Procedimientos y cobertura GraphQL
 
-Los 23 mantenimientos existentes identifican agregar/modificar/borrar mediante @function 1/2/3. ConsultarDatos cubre las 23 tablas mediante @TipoConsulta. **ConsultarDatos es administrativo y usa SELECT *: no se debe exponer sin controlar columnas y permisos, especialmente en Usuario.** Se requieren contratos y consultas apropiadas para GraphQL.
+Los mantenimientos siguen el nombre dbo.Mantenimiento<Tabla>, con @function=1 para agregar, 2 para modificar y 3 para borrar. Las consultas específicas son las siguientes. El código implementado tiene cuatro operaciones por tabla; la columna de estado no acredita pruebas CRUD reales.
 
-No hay queries o mutations implementadas todavía. El mapeo 92/92 es identificación estática, no funcionalidad probada. Los parámetros restantes, tipos, resultados, autorización y errores están pendientes de documentar por operación.
+| Tabla | Lote | Consulta específica | GraphQL |
+| --- | --- | --- | --- |
+| Categoria | A | ConsultarCategorias | Implementado; SQL simulado |
+| Marca | A | ConsultarMarcas | Implementado; SQL simulado |
+| Modelo | A | ConsultarModelos | Módulo pendiente |
+| Repuesto | A | ConsultarRepuestos | Módulo pendiente |
+| RepuestoModelo | A | ConsultarRepuestoModelo | Módulo pendiente |
+| Bodega | A | ConsultarBodegas | Módulo pendiente |
+| Proveedor | A | ConsultarProveedores | Módulo pendiente |
+| Inventario | A | ConsultarInventario | Módulo pendiente |
+| Compra | A | ConsultarCompras | Módulo pendiente |
+| DetalleCompra | A | ConsultarDetalleCompra | Módulo pendiente |
+| Incidencia | A | ConsultarIncidencias | Módulo pendiente |
+| Movimiento | A | ConsultarMovimientos | Módulo pendiente |
+| Rol | B | ConsultarRoles | Implementado; SQL simulado |
+| Usuario | B | ConsultarUsuarios | Implementado; SQL simulado |
+| Empleado | B | ConsultarEmpleados | Implementado; SQL simulado |
+| Aseguradora | B | ConsultarAseguradoras | Implementado; SQL simulado |
+| Caso | B | ConsultarCasos | Implementado; SQL simulado |
+| Cotizacion | B | ConsultarCotizaciones | Implementado; SQL simulado |
+| DetalleCotizacion | B | ConsultarDetallesCotizacion | Implementado; SQL simulado |
+| Venta | B | ConsultarVentas | Implementado; SQL simulado |
+| DetalleVenta | B | ConsultarDetallesVenta | Implementado; SQL simulado |
+| Envio | B | ConsultarEnvios | Implementado; SQL simulado |
+| Auditoria | B | ConsultarAuditorias | Implementado; SQL simulado |
 
-| Tabla | Operación | SP y selector identificados | GraphQL | Responsable/revisor | Estado |
-| --- | --- | --- | --- | --- | --- |
-| Aseguradora | Agregar | MantenimientoAseguradora (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Aseguradora | Modificar | MantenimientoAseguradora (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Aseguradora | Borrar | MantenimientoAseguradora (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Aseguradora | Consultar | ConsultarDatos (@TipoConsulta=4) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Auditoria | Agregar | MantenimientoAuditoria (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Auditoria | Modificar | MantenimientoAuditoria (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Auditoria | Borrar | MantenimientoAuditoria (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Auditoria | Consultar | ConsultarDatos (@TipoConsulta=23) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Bodega | Agregar | MantenimientoBodega (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Bodega | Modificar | MantenimientoBodega (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Bodega | Borrar | MantenimientoBodega (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Bodega | Consultar | ConsultarDatos (@TipoConsulta=10) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Caso | Agregar | MantenimientoCaso (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Caso | Modificar | MantenimientoCaso (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Caso | Borrar | MantenimientoCaso (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Caso | Consultar | ConsultarDatos (@TipoConsulta=16) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Categoria | Agregar | MantenimientoCategoria (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Categoria | Modificar | MantenimientoCategoria (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Categoria | Borrar | MantenimientoCategoria (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Categoria | Consultar | ConsultarDatos (@TipoConsulta=5) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Compra | Agregar | MantenimientoCompra (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Compra | Modificar | MantenimientoCompra (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Compra | Borrar | MantenimientoCompra (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Compra | Consultar | ConsultarDatos (@TipoConsulta=12) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Cotizacion | Agregar | MantenimientoCotizacion (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Cotizacion | Modificar | MantenimientoCotizacion (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Cotizacion | Borrar | MantenimientoCotizacion (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Cotizacion | Consultar | ConsultarDatos (@TipoConsulta=17) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCompra | Agregar | MantenimientoDetalleCompra (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCompra | Modificar | MantenimientoDetalleCompra (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCompra | Borrar | MantenimientoDetalleCompra (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCompra | Consultar | ConsultarDatos (@TipoConsulta=13) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCotizacion | Agregar | MantenimientoDetalleCotizacion (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCotizacion | Modificar | MantenimientoDetalleCotizacion (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCotizacion | Borrar | MantenimientoDetalleCotizacion (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleCotizacion | Consultar | ConsultarDatos (@TipoConsulta=18) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleVenta | Agregar | MantenimientoDetalleVenta (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleVenta | Modificar | MantenimientoDetalleVenta (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleVenta | Borrar | MantenimientoDetalleVenta (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| DetalleVenta | Consultar | ConsultarDatos (@TipoConsulta=20) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Empleado | Agregar | MantenimientoEmpleado (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Empleado | Modificar | MantenimientoEmpleado (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Empleado | Borrar | MantenimientoEmpleado (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Empleado | Consultar | ConsultarDatos (@TipoConsulta=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Envio | Agregar | MantenimientoEnvio (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Envio | Modificar | MantenimientoEnvio (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Envio | Borrar | MantenimientoEnvio (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Envio | Consultar | ConsultarDatos (@TipoConsulta=21) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Incidencia | Agregar | MantenimientoIncidencia (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Incidencia | Modificar | MantenimientoIncidencia (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Incidencia | Borrar | MantenimientoIncidencia (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Incidencia | Consultar | ConsultarDatos (@TipoConsulta=22) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Inventario | Agregar | MantenimientoInventario (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Inventario | Modificar | MantenimientoInventario (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Inventario | Borrar | MantenimientoInventario (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Inventario | Consultar | ConsultarDatos (@TipoConsulta=14) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Marca | Agregar | MantenimientoMarca (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Marca | Modificar | MantenimientoMarca (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Marca | Borrar | MantenimientoMarca (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Marca | Consultar | ConsultarDatos (@TipoConsulta=6) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Modelo | Agregar | MantenimientoModelo (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Modelo | Modificar | MantenimientoModelo (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Modelo | Borrar | MantenimientoModelo (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Modelo | Consultar | ConsultarDatos (@TipoConsulta=7) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Movimiento | Agregar | MantenimientoMovimiento (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Movimiento | Modificar | MantenimientoMovimiento (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Movimiento | Borrar | MantenimientoMovimiento (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Movimiento | Consultar | ConsultarDatos (@TipoConsulta=15) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Proveedor | Agregar | MantenimientoProveedor (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Proveedor | Modificar | MantenimientoProveedor (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Proveedor | Borrar | MantenimientoProveedor (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Proveedor | Consultar | ConsultarDatos (@TipoConsulta=11) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Repuesto | Agregar | MantenimientoRepuesto (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Repuesto | Modificar | MantenimientoRepuesto (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Repuesto | Borrar | MantenimientoRepuesto (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Repuesto | Consultar | ConsultarDatos (@TipoConsulta=8) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| RepuestoModelo | Agregar | MantenimientoRepuestoModelo (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| RepuestoModelo | Modificar | MantenimientoRepuestoModelo (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| RepuestoModelo | Borrar | MantenimientoRepuestoModelo (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| RepuestoModelo | Consultar | ConsultarDatos (@TipoConsulta=9) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Rol | Agregar | MantenimientoRol (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Rol | Modificar | MantenimientoRol (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Rol | Borrar | MantenimientoRol (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Rol | Consultar | ConsultarDatos (@TipoConsulta=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Usuario | Agregar | MantenimientoUsuario (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Usuario | Modificar | MantenimientoUsuario (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Usuario | Borrar | MantenimientoUsuario (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Usuario | Consultar | ConsultarDatos (@TipoConsulta=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Venta | Agregar | MantenimientoVenta (@function=1) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Venta | Modificar | MantenimientoVenta (@function=2) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Venta | Borrar | MantenimientoVenta (@function=3) | Pendiente | Por asignar | Contrato y permisos por revisar |
-| Venta | Consultar | ConsultarDatos (@TipoConsulta=19) | Pendiente | Por asignar | Contrato y permisos por revisar |
+Categoria y Marca suman ocho operaciones A; las once tablas B suman 44. Total: 52/92 operaciones implementadas. Los demás módulos A siguen pendientes.
 
-### Procedimientos adicionales y transversales
+ConsultarDatos es administrativo y usa SELECT *; la API no lo expone. ObtenerCredencialLogin es interno y no debe publicar hashes. La API usa LoginUsuario para validar la clave y obtener un perfil coherente. La secuencia SecuenciaCodigoRepuesto y el verificador CLR se comprobaron; ver las [herramientas de mantenimiento](../../README.md#scripts-sql).
 
-`ConsultarBaseActiva`, `ConsultarCatalogo`, `ConsultarCategorias`, `ConsultarDatos`, `ConsultarMarcas`, `ConsultarMisCasos`, `ConsultarModelos`, `ConsultarRepuestoInterno`, `GuardarRepuestoApp`, `LoginUsuario`, `ObtenerCredencialLogin`. Junto con los 23 mantenimientos forman los 34 SP identificados. ConsultarMisCasos debe recibir el usuario obtenido de la sesión verificada; ObtenerCredencialLogin devuelve un hash para uso interno, nunca para una respuesta pública.
+Los ajustes A están en [Nuevos_Y_Modificacion_SP.sql](../../scripts/Nuevos_Y_Modificacion_SP.sql), con aplicación reportada por persona 1. Los B están en [03](../../sql/ajustes/03_lote_B_usuarios_procedimientos.sql) y [04](../../sql/ajustes/04_lote_B_negocio_procedimientos.sql), aplicados y contrastados. Estos scripts requieren la estructura heredada del proyecto 1.
 
-## 3. Seguridad y ajustes pendientes
+## 3. Reparto y dependencias entre compañeros
 
-La política por operación debe acordarse y probarse. Los roles de negocio Administrador, Empleado y Cliente no sustituyen identidades SQL separadas. No asignar permisos de administración a la API para resolver pruebas.
+| Responsable | Lote | Tablas | Revisor |
+| --- | --- | --- | --- |
+| Persona 1 | A | Categoria, Marca, Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia, Movimiento | Persona 2 |
+| Persona 2 | B | Rol, Usuario, Empleado, Aseguradora, Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio, Auditoria | Persona 1 |
 
-| Tabla/SP/operación | Cliente | Empleado | Genérico | Regla | Prueba SQL/GraphQL |
-| --- | --- | --- | --- | --- | --- |
-| Por completar según matriz del modelo | Pendiente | Pendiente | No aplica hasta justificarlo | Por definir | Pendiente |
+El reparto original preveía 48 puntos por persona incluyendo pruebas, documentación y revisión. La cantidad de tablas no mide por sí sola el esfuerzo; acordar entre ambos cualquier reasignación y revisión cruzada, sin dar por aceptadas tareas que aún carecen de evidencia.
 
-Pendientes BD01–BD07: separar cuentas/permisos; respuestas y errores de SP; asignación de NULL; consultas con columnas controladas; protección de totales/inventario/auditoría; estrategia de cargas/triggers; alcance del modelo y login. Ver [detalle y estado](BASE_DATOS.md).
+Movimiento necesita Empleado; Caso necesita Modelo; los detalles de cotización/venta necesitan Repuesto y la venta necesita Bodega. Los niveles FK de la tabla técnica sirven de referencia, pero el orden de carga también depende de triggers y saldos conciliados. No cargar a la vez un saldo final de inventario y las operaciones que lo reconstruyen sin controlar sus efectos.
 
-## 4. Archivos y cargas por tabla
+## 4. Carga y evidencia pendientes
 
-Ninguna fila preexistente acredita por sí misma la importación del proyecto. Completar archivo, formato, herramienta, conteos antes/después y capturas cuando el usuario ejecute las cargas.
+Para cada una de las 23 tablas registrar archivo/hoja/formato, herramienta, conteos antes/después, validación de PK/FK y capturas de resultado. Usar SSMS y bcp al menos una vez cada uno, conservar los originales y preparar el Word/PDF con la [plantilla de evidencias](../PLANTILLA_EVIDENCIAS.md).
 
-| Tabla | Archivo/hoja/formato | Herramienta | Filas previstas/importadas | Conteos antes/después | Evidencia |
-| --- | --- | --- | --- | --- | --- |
-| Aseguradora | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Auditoria | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Bodega | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Caso | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Categoria | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Compra | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Cotizacion | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| DetalleCompra | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| DetalleCotizacion | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| DetalleVenta | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Empleado | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Envio | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Incidencia | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Inventario | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Marca | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Modelo | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Movimiento | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Proveedor | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Repuesto | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| RepuestoModelo | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Rol | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Usuario | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-| Venta | Pendiente | Por definir | Pendiente | Pendiente | Pendiente |
-
-### Propuesta de estrategia de carga (Persona 1, pendiente de acuerdo)
-
-1. **Datos existentes:** vaciar las 105 filas y recargar todo desde archivos, incluidos los registros actuales, para que la evidencia muestre la carga completa de cada tabla.
-2. **Identity:** usar "Enable identity insert" en el asistente SSMS o `-E` en bcp, para que los IDs de los archivos coincidan con las FK.
-3. **Triggers:** cargar sin dispararlos, con Inventario y los Total ya conciliados en los archivos; así no se duplican existencias ni totales.
-4. **Roles:** en el archivo de Usuario, los usuarios de Empleado tienen rol empleado y los de Aseguradora rol cliente.
-5. **Contraseñas:** ninguna contraseña real en los archivos; usar el formato que espera LoginUsuario.
-6. **Orden:** respetar los niveles de la sección 1; Auditoria al final.
-
-## 5. Asignación equilibrada
-
-Presupuesto: **48 puntos por persona**, según [ROADMAP.md](../roadmap/ROADMAP.md). La cantidad de tablas no determina por sí sola el esfuerzo; ponderar carga (1–3), SP/CRUD (1–5), pruebas/evidencia (1–3), más tareas transversales y revisión. Los pesos comparativos no se suman a los 96 puntos del calendario.
-
-| Paquete/tabla/subtarea | Carga 1–3 | SP/CRUD 1–5 | Pruebas/evidencia 1–3 | Total | Responsable | Revisor |
-| --- | ---: | ---: | ---: | ---: | --- | --- |
-| Lote A (catálogo, inventario y compras): Categoria, Marca, Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia, Movimiento | — | — | — | 12 tablas · 17 FK · 6 triggers · 48 CRUD | Persona 1 | Persona 2 |
-| Lote B (usuarios, clientes, cotizaciones y ventas): Rol, Usuario, Empleado, Aseguradora, Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio, Auditoria | — | — | — | 11 tablas · 15 FK · 7 triggers · 44 CRUD | Persona 2 | Persona 1 |
-
-Propuesta de lotes por dominio elaborada por Persona 1 el 26/10/2026, **pendiente de aprobación de Persona 2**. El lote B incluye Rol y Usuario porque coincide con la tarea de seguridad y login de Persona 2. La diferencia de una tabla se compensa con que el lote A tiene más FK y tablas de inventario.
-
-Dependencias cruzadas que obligan a coordinar la carga:
-
-- Movimiento (A) necesita Empleado (B).
-- Caso (B) necesita Modelo (A); DetalleCotizacion y DetalleVenta (B) necesitan Repuesto y Bodega (A).
-- Secuencia: A carga Categoria, Marca, Bodega, Proveedor, Modelo, Repuesto, RepuestoModelo, Inventario y Compra → B carga Rol, Usuario, Empleado y Aseguradora → A carga DetalleCompra, Incidencia y Movimiento → B carga Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio y Auditoria.
-
-## 6. Trazabilidad del paquete final
-
-| Tabla | Fuente de carga | Capturas | Apartado Word/PDF | CRUD/SP revisado y probado | Script SSMS con datos | Revisor/fecha |
-| --- | --- | --- | --- | --- | --- | --- |
-| Aseguradora | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Auditoria | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Bodega | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Caso | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Categoria | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Compra | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Cotizacion | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| DetalleCompra | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| DetalleCotizacion | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| DetalleVenta | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Empleado | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Envio | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Incidencia | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Inventario | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Marca | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Modelo | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Movimiento | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Proveedor | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Repuesto | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| RepuestoModelo | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Rol | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Usuario | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Venta | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-
-Cerrar las 23 filas contra los entregables reales. La [plantilla de evidencias](../PLANTILLA_EVIDENCIAS.md) no sustituye al Word/PDF final. El [seguimiento](../markdowns/PROGRESO.md) conserva los pendientes sin asignar revisiones ficticias.
+Acordar el tratamiento de identity, NULL, codificación, restricciones y triggers antes de importar. No ejecutar una propuesta de vaciado de datos como parte de estas verificaciones. Los datos preexistentes y los scripts de ajustes no sustituyen la carga documentada.

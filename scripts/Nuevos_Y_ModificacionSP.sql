@@ -1,11 +1,11 @@
 /* =====================================================================
-   Proyecto 2 · TI-156 · Lote A (Persona 1)
+   Proyecto 2 Â· TI-156 Â· Lote A (Persona 1)
    Ajustes y procedimientos de consulta para las APIs GraphQL
    
    Parte 1. ALTER de los Mantenimiento<Tabla> del lote A:
      - SET NOCOUNT ON
      - function 1 devuelve el ID nuevo con SCOPE_IDENTITY()
-     - function 2 da error si el registro no existe (antes devolvía éxito
+     - function 2 da error si el registro no existe (antes devolvÃ­a Ã©xito
        aunque no modificara nada)
      
    Parte 2. Procedimientos de consulta para el CRUD:
@@ -528,4 +528,3 @@ BEGIN
     ORDER BY Fecha DESC, IdMovimiento DESC;
 END;
 GO
-
