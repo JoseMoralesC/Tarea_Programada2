@@ -45,7 +45,7 @@ export function cargarConfig(env = process.env) {
     if (genericoHabilitado) roles.generico = credenciales('DB_GENERIC');
     if (new Set(Object.values(roles).map(({user}) => user.trim().toLowerCase())).size
         !== Object.keys(roles).length) {
-        throw new Error('Cada rol debe utilizar una identidad SQL distinta');
+       throw new Error('Cada rol debe utilizar una identidad SQL distinta');
     }
     return {
         puerto: puerto(env, 'PORT', '4000'),
