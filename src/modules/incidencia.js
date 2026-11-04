@@ -1,8 +1,5 @@
-import { sql } from '../db.js';
-import { poolAutorizado } from '../auth/contexto.js';
+import {crearCrudCatalogo} from './crud-catalogo.js';
 
-// Schema: el contrato de Incidencia (repuestos dañados, rechazados, etc.)
-// IdCompra es FK opcional: la incidencia puede no venir de una compra
 export const typeDefs = `#graphql
   type Incidencia {
     IdIncidencia: Int!
@@ -25,58 +22,45 @@ export const typeDefs = `#graphql
   }
 `;
 
-const ROLES = ['ADMINISTRADOR', 'EMPLEADO'];
-
-// Fecha es datetime: se recibe y se devuelve en formato ISO completo
-const aFecha = (texto) => (texto ? new Date(texto) : null);
-const aTexto = (fecha) => (fecha ? fecha.toISOString() : null);
-
-export const resolvers = {
-  Query: {
-    incidencias: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      const resultado = await pool.request()
-        .input('IdIncidencia', sql.Int, args.idIncidencia ?? null)
-        .execute('ConsultarIncidencias');
-      return resultado.recordset.map((fila) => ({ ...fila, Fecha: aTexto(fila.Fecha) }));
+export const resolvers = crearCrudCatalogo({
+    "nombre": "Incidencia",
+    "consulta": "incidencias",
+    "campos": {
+        "IdRepuesto": {
+            "tipo": "id"
+        },
+        "IdProveedor": {
+            "tipo": "id"
+        },
+        "IdCompra": {
+            "tipo": "id",
+            "nullable": true
+        },
+        "Tipo": {
+            "tipo": "estado",
+            "valores": [
+                "Dañado",
+                "Defectuoso",
+                "Faltante",
+                "Rechazado"
+            ],
+            "limite": 20
+        },
+        "Cantidad": {
+            "tipo": "entero",
+            "minimo": 1
+        },
+        "Fecha": {
+            "tipo": "fechaHora"
+        }
     },
-  },
-  Mutation: {
-    // Tipo debe ser uno de los valores del CHECK de la tabla. Sin fecha, el SP usa GETDATE().
-    agregarIncidencia: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      const resultado = await pool.request()
-        .input('function', sql.Int, 1)
-        .input('IdRepuesto', sql.Int, args.idRepuesto)
-        .input('IdProveedor', sql.Int, args.idProveedor)
-        .input('IdCompra', sql.Int, args.idCompra ?? null)
-        .input('Tipo', sql.VarChar(20), args.tipo)
-        .input('Cantidad', sql.Int, args.cantidad)
-        .input('Fecha', sql.DateTime, aFecha(args.fecha))
-        .execute('MantenimientoIncidencia');
-      return resultado.recordset[0].IdIncidencia;
-    },
-    modificarIncidencia: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      await pool.request()
-        .input('function', sql.Int, 2)
-        .input('IdIncidencia', sql.Int, args.idIncidencia)
-        .input('IdRepuesto', sql.Int, args.idRepuesto ?? null)
-        .input('IdProveedor', sql.Int, args.idProveedor ?? null)
-        .input('IdCompra', sql.Int, args.idCompra ?? null)
-        .input('Tipo', sql.VarChar(20), args.tipo ?? null)
-        .input('Cantidad', sql.Int, args.cantidad ?? null)
-        .input('Fecha', sql.DateTime, aFecha(args.fecha))
-        .execute('MantenimientoIncidencia');
-      return true;
-    },
-    borrarIncidencia: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      await pool.request()
-        .input('function', sql.Int, 3)
-        .input('IdIncidencia', sql.Int, args.idIncidencia)
-        .execute('MantenimientoIncidencia');
-      return true;
-    },
-  },
-};
+    "requeridos": [
+        "IdRepuesto",
+        "IdProveedor",
+        "Tipo",
+        "Cantidad"
+    ],
+    "filtros": [
+        "IdIncidencia"
+    ]
+});

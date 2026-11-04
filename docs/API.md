@@ -1,142 +1,86 @@
-# Guía de la API
+# Cómo usamos la API
 
-Backend GraphQL modular sobre RepuestosAutomotrices. El inventario de tablas y el reparto por persona están en [INVENTARIO.md](info_bd/INVENTARIO.md); instalación, estado y pendientes se mantienen en el [README](../README.md).
+Organizamos el servicio por tablas y conservamos las mismas operaciones para ambos lotes. Cada solicitud llega a GraphQL y se resuelve mediante un procedimiento almacenado de SQL Server.
 
-## Configuración
+## Inicio de sesión
 
-Usar el .env privado siguiendo [.env.example](../.env.example). DB_SERVER, DB_PORT y DB_DATABASE son comunes; DB_CLIENT_USER/PASSWORD y DB_EMPLOYEE_USER/PASSWORD deben estar completos y corresponder a identidades SQL distintas.
-
-Los pools son independientes y se reutilizan por rol. Administrador y Empleado usan la conexión empleado; Cliente usa cliente. DB_SETUP nunca es una conexión de la API.
-
-DB_LOGIN_ROLE=cliente selecciona la conexión que ejecuta dbo.LoginUsuario antes de conocer al usuario; necesita EXECUTE sobre ese SP. Puede elegirse generico solo si DB_GENERIC_ENABLED=true y sus credenciales están completas. No se usa empleado ni mantenimiento para el login.
-
-DB_GENERIC_ENABLED=false es el valor predeterminado. Habilitarlo permite únicamente lectura anónima de Categoría/Marca. No habilita acceso a las tablas B.
-
-Puertos y booleanos se validan al arrancar. DB_ENCRYPT=true y DB_TRUST_SERVER_CERTIFICATE=true mantienen el acuerdo del servidor actual: conexión cifrada que confía en el certificado presentado. La red privada no sustituye esta configuración.
-
-## Login y sesión
-
-Enviar POST a http://localhost:4000/ con un documento GraphQL y variables privadas:
+Después de ejecutar `npm start`, enviamos las solicitudes a http://localhost:4000/.
 
 ```graphql
 mutation IniciarSesion($correo: String!, $clave: String!) {
   login(correo: $correo, clave: $clave) {
     token
     expiraEn
-    usuario { idUsuario correo nombre rol idEmpleado idAseguradora }
+    usuario { idUsuario nombre rol idEmpleado idAseguradora }
   }
 }
 ```
 
-dbo.LoginUsuario recibe Correo varchar(100), Clave nvarchar(256) y Valido bit OUTPUT. La API toma el perfil devuelto cuando la validación es correcta y no usa ObtenerCredencialLogin ni publica hashes.
-
-Incluir Authorization: Bearer <token> en las solicitudes siguientes. El rol viene de la sesión verificada; headers de rol o IDs suministrados por el cliente no cambian la conexión autorizada.
+Completamos las variables con una cuenta de prueba de nuestra base. En las solicitudes siguientes agregamos `Authorization: Bearer <token>`. El servicio obtiene el rol de la sesión, por eso no necesitamos enviarlo por separado ni aceptamos que se cambie desde el cliente.
 
 ```graphql
-query MiSesion {
+query {
   sesion { idUsuario rol }
   categorias { IdCategoria Nombre }
   marcas { IdMarca Nombre }
 }
 
-mutation Salir {
-  cerrarSesion
-}
+mutation { cerrarSesion }
 ```
 
-Las sesiones duran una hora y se guardan en memoria, con un máximo de 1000. Se revocan al cerrar sesión, reiniciar el servidor o modificar/borrar ese Usuario mediante la API. Los cambios directos en SQL y cambios de nombre de Rol no invalidan automáticamente sesiones emitidas. Para varias instancias o revocación inmediata ante cambios externos se necesita almacenamiento compartido y verificación de vigencia.
+Las sesiones duran una hora y se pierden al reiniciar el servidor. Al modificar o borrar un usuario desde la API cerramos sus sesiones. Si hacemos cambios directamente en SQL, reiniciamos el servicio cuando necesitemos invalidar las sesiones anteriores.
 
-## Operaciones y permisos
+## Acceso que acordamos
 
-Cada módulo declara agregar<Tabla>, modificar<Tabla> y borrar<Tabla>, además de su query. Las altas devuelven el ID; modificaciones y borrados devuelven Boolean. En los módulos B se usan datos: <Tabla>Input! al agregar y datos: <Tabla>Cambios! al modificar, salvo Rol, que recibe nombre directamente. Los argumentos completos se consultan en el esquema GraphQL o la colección Postman.
+| Información | Administrador | Empleado | Cliente | Sin sesión, si habilitamos genérico |
+| --- | --- | --- | --- | --- |
+| Categorías, marcas, modelos y compatibilidades | CRUD | CRUD | Consulta | Consulta |
+| Repuestos con costo, bodegas, proveedores e inventario | CRUD | CRUD | Sin acceso | Sin acceso |
+| Compras, detalles de compra, incidencias y movimientos | CRUD | CRUD | Sin acceso | Sin acceso |
+| Roles y auditoría | CRUD | Sin acceso | Sin acceso | Sin acceso |
+| Usuarios | CRUD | Consulta propia | Consulta propia | Sin acceso |
+| Empleados | CRUD | Consulta propia | Sin acceso | Sin acceso |
+| Aseguradoras | CRUD | Consulta | Consulta propia | Sin acceso |
+| Casos, cotizaciones, ventas, sus detalles y envíos | CRUD | CRUD | Consulta propia | Sin acceso |
 
-| Tabla / query | Administrador | Empleado | Cliente |
-| --- | --- | --- | --- |
-| Categoria / categorias | CRUD | CRUD | Consulta |
-| Marca / marcas | CRUD | CRUD | Consulta |
-| Rol / roles(idRol) | CRUD | Sin acceso | Sin acceso |
-| Usuario / usuarios(idUsuario) | CRUD | Consulta propia | Consulta propia |
-| Empleado / empleados(idEmpleado) | CRUD | Consulta propia | Sin acceso |
-| Aseguradora / aseguradoras(idAseguradora) | CRUD | Consulta | Consulta propia |
-| Caso / casos(idCaso, idAseguradora) | CRUD | CRUD | Consulta propia |
-| Cotizacion / cotizaciones(idCotizacion, idCaso) | CRUD | CRUD | Consulta propia |
-| DetalleCotizacion / detallesCotizacion(idDetalle, idCotizacion) | CRUD | CRUD | Consulta propia |
-| Venta / ventas(idVenta, idCotizacion) | CRUD | CRUD | Consulta propia |
-| DetalleVenta / detallesVenta(idDetalle, idVenta) | CRUD | CRUD | Consulta propia |
-| Envio / envios(idEnvio, idVenta) | CRUD | CRUD | Consulta propia |
-| Auditoria / auditorias(idAuditoria, tabla) | CRUD | Sin acceso | Sin acceso |
+Usamos una conexión para cliente y otra para empleado; administrador utiliza esta última. La conexión genérica es opcional. El login se ejecuta con la conexión indicada por `DB_LOGIN_ROLE`, que normalmente es cliente. Las cuentas SQL reciben permiso únicamente para los procedimientos que necesitan.
 
-Los filtros son opcionales. Las consultas B calculan IdUsuario desde la sesión y recorren las FK hasta Aseguradora para limitar los datos del cliente. DetalleVenta.Costo se oculta al cliente tanto en SQL como en GraphQL; el costo de envío sí es visible. Auditoria tiene mantenimiento administrativo para el CRUD académico y no se presenta como registro inmutable.
+## Agregar, cambiar y borrar
 
-En altas de Venta/Cotizacion, idEmpleado se toma del perfil si se omite. Un empleado no puede atribuir la operación a otro; un administrador puede indicarlo. Se mantienen las FK y los triggers de validación de perfiles.
-
-## Usuarios y contraseñas
+En el lote A enviamos los campos como argumentos. En los módulos B usamos `datos`, excepto Rol. Podemos consultar los argumentos completos en el esquema de Apollo o en las colecciones Postman.
 
 ```graphql
-mutation CrearUsuario($datos: UsuarioInput!) {
-  agregarUsuario(datos: $datos)
+mutation {
+  agregarProveedor(nombre: "Proveedor de prueba", diasEntrega: 2)
 }
 
-mutation CambiarClave($id: Int!, $clave: String!) {
-  modificarUsuario(idUsuario: $id, datos: { clave: $clave })
+mutation {
+  modificarProveedor(idProveedor: 1, telefono: null)
 }
-```
 
-UsuarioInput exige idRol, correo y clave; activo es true por defecto. Clave admite de 1 a 256 caracteres y conserva espacios y Unicode. El backend genera el hash de forma asíncrona con [Identity V3 de Microsoft](https://github.com/dotnet/aspnetcore/blob/main/src/Identity/Extensions.Core/src/PasswordHasher.cs): PBKDF2-HMAC-SHA512, 100000 iteraciones, sal aleatoria de 16 bytes y subclave de 32 bytes. El resultado ocupa 84 caracteres Base64, compatible con Contrasena varchar(255). No se aceptan hashes como entrada GraphQL.
-
-Después de crear Usuario, crear su perfil Empleado (rol Administrador/Empleado) o Aseguradora (rol Cliente) con el ID devuelto. LoginUsuario exige un perfil coherente: la fila Usuario por sí sola no habilita el acceso. EmpleadoInput exige idUsuario, cedula, nombre y puesto. AseguradoraInput exige idUsuario, cedulaJuridica y nombre; telefono/correo son opcionales.
-
-## Tipos y reglas de negocio
-
-| Enum | Valores GraphQL |
-| --- | --- |
-| EstadoCaso | ABIERTO, EN_PROCESO, CERRADO, RECHAZADO |
-| EstadoCotizacion | PENDIENTE, APROBADA, RECHAZADA |
-| EstadoDetalleCotizacion | PENDIENTE, APROBADO, RECHAZADO |
-| EstadoEnvio | PENDIENTE, EN_CAMINO, ENTREGADO |
-| AccionAuditoria | INSERTAR, MODIFICAR, BORRAR |
-
-Los enums se traducen a los textos de SQL, como En proceso / En camino e I / U / D para auditoría. Se validan los estados de los CHECK existentes; no hay una máquina de transiciones adicional ni una regla nueva de aprobación de ventas.
-
-Dinero recibe cadenas como "125.50" y devuelve dos decimales. Rechaza negativos, exponentes y más de dos decimales. Los campos decimal(10,2) admiten hasta 99999999.99; las cantidades son enteros positivos.
-
-FechaHora recibe ISO 8601 con zona explícita, normaliza a UTC y valida el rango datetime de SQL. Los SP 04 usan GETUTCDATE() si se omite una fecha obligatoria al agregar. No se convirtieron fechas históricas ni defaults de tablas/triggers: el equipo debe confirmar la zona usada anteriormente.
-
-Las modificaciones exigen al menos un cambio. NULL explícito limpia telefono/correo de Aseguradora y fechaEntrega de Envio; omitir esos campos conserva su valor. Los campos obligatorios rechazan NULL.
-
-```graphql
-mutation LimpiarEntrega($id: Int!) {
-  modificarEnvio(idEnvio: $id, datos: { fechaEntrega: null })
+mutation {
+  agregarUsuario(datos: {
+    idRol: 2
+    correo: "prueba@ejemplo.test"
+    clave: "clave temporal de prueba"
+  })
 }
 ```
 
-Cotizacion.Total y Venta.Total son de solo lectura y se crean en cero. Los triggers recalculan los totales al cambiar detalles. Los mantenimientos 04 son transaccionales; los detalles bloquean sus cabeceras y DetalleVenta bloquea las existencias afectadas para comprobar stock. El trigger sigue encargado de restar/devolver existencias, sin duplicar ese ajuste en el SP.
+Los IDs del ejemplo se sustituyen por los de la base de pruebas. Las altas devuelven un ID y los cambios o borrados devuelven `true`. RepuestoModelo se identifica por el par `idRepuesto` e `idModelo`; su alta devuelve `true`.
 
-| Código GraphQL | Significado |
-| --- | --- |
-| UNAUTHENTICATED | Falta sesión o token inválido/vencido. |
-| FORBIDDEN | El rol o propietario no autoriza la operación. |
-| BAD_USER_INPUT | Entrada inválida o fuera del contrato. |
-| NOT_FOUND | El mantenimiento no encontró el registro. |
-| CONFLICT | FK, duplicado, perfil incompatible, stock o deadlock. |
-| INTERNAL_SERVER_ERROR | Error interno; su detalle SQL no se publica. |
+Si omitimos un campo al modificar, conservamos su valor. Si enviamos `null`, lo dejamos vacío cuando la tabla lo permite: contactos, año final del modelo, recepción de compra, compra de una incidencia y bodegas opcionales de un movimiento, entre otros. No aceptamos cambios sin campos ni valores vacíos para datos obligatorios.
 
-Un deadlock requiere reintentar la operación completa; no se reintentan escrituras automáticamente. Las restricciones referenciales siguen aplicándose a los borrados.
+Las fechas de Compra se escriben como `AAAA-MM-DD`. En Incidencia y Movimiento aceptamos esa forma o una fecha ISO con zona horaria. En los módulos B usamos `FechaHora`, por ejemplo `2026-11-03T12:00:00Z`. Rechazamos fechas inexistentes.
 
-## Pruebas y estado SQL
+En el lote B enviamos los importes como texto con hasta dos decimales, por ejemplo `"10.50"`. El lote A conserva sus argumentos numéricos y también valida que tengan como máximo dos decimales. Los estados disponibles se consultan en el esquema.
 
-`npm test` ejecuta 39 pruebas sin SQL real: 44 operaciones B y las ocho existentes del lote A, con autenticación, permisos, scalars, validación, privacidad y manejo de errores. No acredita efectos reales de stock, totales o concurrencia.
+Los empleados registran movimientos, ventas y cotizaciones con su propio perfil. Solo el administrador puede indicar otro empleado. Los clientes ven únicamente sus operaciones y no reciben el costo interno de los detalles de venta.
 
-`npm run verify:hash` usa las credenciales DB_SETUP fuera de la API para comprobar una contraseña ficticia mediante el CLR. No consulta hashes almacenados ni modifica registros. La comprobación real pasó el 29/10/2026, también con Unicode.
+## Usuarios y errores
 
-El usuario aplicó [SQL 03](../sql/ajustes/03_lote_B_usuarios_procedimientos.sql) y [SQL 04](../sql/ajustes/04_lote_B_negocio_procedimientos.sql). Se contrastaron sus 22 definiciones/parámetros con los archivos y se ejecutaron once consultas con ID 0, sin columnas de credenciales. Ambos scripts pasaron revisión sintáctica con ScriptDom. No se ejecutaron ciclos CRUD reales. En la última revisión la cuenta cliente tenía db_owner y faltaban credenciales de empleado; falta aceptar los permisos SQL por rol.
+Guardamos las contraseñas mediante un hash con sal aleatoria; no devolvemos claves ni hashes. Después de crear un usuario, agregamos el perfil de Empleado o Aseguradora que corresponde a su rol para que pueda iniciar sesión.
 
-La [colección Postman](pruebas/lote_B.postman_collection.json) contiene 57 solicitudes: login, 44 operaciones CRUD, once comprobaciones de ausencia y logout. Se validaron sus documentos y scripts de variables contra el esquema, sin enviar esas escrituras a SQL. Completar localmente las credenciales de login, correo/clave de prueba y las FK de referencia antes de usarla en una base de pruebas. Las referencias empiezan en 0; los IDs creados por cada carpeta se guardan aparte. Empleado y Aseguradora requieren usuarios de referencia distintos y con el rol correcto. Para recorrer todas las carpetas se necesita un administrador; repetir con empleado/cliente permite comprobar denegaciones. No guardar claves o tokens reales en la colección compartida.
+Los errores indican si falta iniciar sesión, no hay permiso, los datos son inválidos, el registro no existe o hay un conflicto de relaciones o existencias. Los mensajes internos de SQL se mantienen fuera de la respuesta.
 
-Para el recorrido de demostración se agregó otra [colección automatizada](pruebas/demo_crud_B.postman_collection.json), con su [guía de preparación y recuperación](pruebas/DEMO_CRUD.md). Genera datos únicos y encadena los IDs, comprueba los cambios y totales, y limpia sus registros por dependencias. Rol incluye consulta y rechazo esperado, porque los tres nombres admitidos ya existen. Configurar tres referencias del lote A con `sql/07_referencias_demo.sql`; el stock debe permitir dos unidades. `npm run demo:check` valida los documentos y scripts con respuestas simuladas, sin SQL real. Este archivo no acredita por sí solo una ejecución real ni restaura auditorías/identidades al limpiar.
-
-Faltan ciclos CRUD, comparación entre dos clientes, stock/totales antes y después, rollback, concurrencia y pruebas desde ambos equipos con cuentas restringidas. El listado general de pendientes y los entregables académicos están en el README.
-
-## Añadir módulos
-
-Importar sql desde src/db.js y obtener el pool dentro de cada resolver mediante poolAutorizado(contexto, rolesPermitidos). No usar un pool global ni escoger credenciales desde argumentos del cliente. Registrar el módulo en src/server.js y conservar el uso de SP parametrizados. Los módulos de negocio comparten validación en crud-negocio.js.
+Para comprobarlo usamos las pruebas de `test`, la [guía de Postman](pruebas/DEMO_CRUD.md) y `npm run test:integration`. La preparación de la base se explica en [Instalación SQL](INSTALACION_SQL.md).

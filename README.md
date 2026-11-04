@@ -1,84 +1,67 @@
-# Tarea Programada 2 — Bases de datos avanzadas
+# Proyecto 2 — Repuestos automotrices
 
-Backend GraphQL de repuestos automotrices para TI-156, III Cuatrimestre de 2026. Usa Node.js, Apollo Server y mssql para ejecutar procedimientos almacenados en SQL Server sobre RepuestosAutomotrices.
+Continuamos el proyecto del curso TI-156 Bases de datos avanzadas con una API GraphQL para nuestra base `RepuestosAutomotrices`. Nos repartimos el trabajo en dos lotes y mantuvimos un módulo por tabla para poder revisar juntos el funcionamiento.
 
-## Instalación y ejecución
+El proyecto incluye las cuatro operaciones de las 23 tablas: agregar, consultar, modificar y borrar. Usamos Node.js, Apollo Server y SQL Server. Las operaciones se resuelven con procedimientos almacenados y cada tipo de usuario utiliza la conexión SQL que le corresponde.
 
-Requiere Node.js 22 o posterior y acceso al servidor SQL por la red acordada con el equipo.
+## Para ejecutar el proyecto
+
+Necesitamos Node.js 22 o posterior y acceso al servidor SQL que usamos como equipo.
 
 ```powershell
 npm ci
-# Solo si todavía no existe .env:
-Copy-Item -LiteralPath .env.example -Destination .env -ErrorAction Stop -NoClobber
-# Completar las variables locales antes de iniciar:
+# Si todavía no tenemos el archivo de configuración:
+Copy-Item -LiteralPath .env.example -Destination .env -NoClobber
+```
+
+Completamos `.env` con el servidor, la base y las cuentas de cliente, empleado y, si lo habilitamos, genérico. Las cuentas SQL son distintas de los usuarios que inician sesión en la aplicación. Dejamos las contraseñas entre comillas cuando contienen `#` y conservamos este archivo solo en cada equipo.
+
+```powershell
 npm start
 ```
 
-La API se sirve en http://localhost:4000/ por defecto. `npm run dev` activa la recarga al editar código; `npm test` ejecuta las pruebas locales sin SQL Server.
+La dirección predeterminada es http://localhost:4000/. Con `npm run dev` podemos trabajar con recarga automática.
 
-Completar en .env el servidor, puerto, base y credenciales SQL distintas para cliente y empleado. DB_SETUP es solo mantenimiento. Las contraseñas que contienen # deben ir entre comillas. .env, node_modules y archivos temporales están excluidos de Git; .env.example se comparte sin credenciales. La API abre las conexiones cuando las necesita: el arranque HTTP no acredita acceso a SQL.
+## Decisiones que tomamos
 
-## Estado del proyecto — 29/10/2026
+- Administrador y empleado comparten la conexión de personal, pero la API limita las operaciones de cada uno.
+- El cliente consulta sus propios datos. No puede cambiar su rol enviándolo en una solicitud.
+- Si habilitamos el acceso genérico, permitimos consultar categorías, marcas, modelos y compatibilidades.
+- Validamos fechas, textos, cantidades e importes antes de enviarlos a SQL. Omitir un campo conserva su valor; enviar `null` limpia los campos que permiten quedar vacíos.
+- Las ventas, compras y movimientos actualizan existencias y totales con las reglas de la base. Un empleado no puede registrar un movimiento a nombre de otro.
+- Conservamos las evidencias que ya tenemos y las damos por suficientes para el cierre.
 
-- Modelo identificado: 23 tablas; cobertura prevista de al menos 92 operaciones CRUD, más autenticación.
-- Persona 1, lote A: Categoría y Marca implementadas (8 operaciones); faltan diez módulos.
-- Persona 2, lote B: los once módulos están implementados (44 operaciones), con login, sesiones, conexiones por rol y autorización.
-- Total declarado y verificado con SQL simulado: 52/92 operaciones; 39 pruebas automatizadas aprobadas.
-- El usuario aplicó SQL 03/04. Se comprobaron sus 22 definiciones/parámetros y once consultas de solo lectura, sin exponer columnas de credenciales.
-- El generador de contraseñas se comprobó contra el CLR real con una clave ficticia correcta y otra incorrecta.
-
-La implementación y las pruebas locales no acreditan todavía los ciclos CRUD reales, aislamiento entre clientes, inventario, totales o concurrencia.
-
-## Documentación y herramientas
-
-| Archivo | Uso |
-| --- | --- |
-| [Guía API](docs/API.md) | Configuración, login, permisos, operaciones y pruebas. |
-| [Estado frente al requerimiento](docs/ESTADO_PROYECTO.md) | Evidencia y pendientes de ambas personas frente al PDF y al roadmap. |
-| [Roadmap](docs/roadmap/ROADMAP.md) | Plan de fases, responsables y puntos; sus estados iniciales son históricos. |
-| [Inventario](docs/info_bd/INVENTARIO.md) | Tablas, columnas, relaciones, triggers y reparto por lote. |
-| [Colección Postman](docs/pruebas/lote_B.postman_collection.json) | 44 operaciones B, login/logout y comprobaciones de ausencia; sin credenciales reales. |
-| [Demo CRUD automatizada](docs/pruebas/DEMO_CRUD.md) | Nueva colección con datos únicos, IDs encadenados, comprobación de cambios/totales y limpieza por dependencias. Configuración y límites en la guía. |
-| [Enunciado original](docs/requeriemientos/Tarea%20programada%202.pdf) | Requisitos académicos. |
-| [Plantilla de evidencias](docs/PLANTILLA_EVIDENCIAS.md) | Preparación del documento Word/PDF de carga. |
-
-Los módulos viven en src/modules, la autenticación en src/auth y la composición del esquema en src/server.js. Los tests están en test/.
-
-## Scripts SQL
-
-Conservar los scripts aunque estén aplicados para que el equipo pueda reproducir los ajustes. Requieren la estructura heredada del proyecto 1; no son una creación completa de la base.
-
-| Archivo | Función / estado |
-| --- | --- |
-| [Ajustes lote A](scripts/Nuevos_Y_Modificacion_SP.sql) | Consultas y mantenimientos de persona 1; aplicación reportada por el compañero, pendiente de revisión integral. |
-| [03: usuarios y perfiles](sql/ajustes/03_lote_B_usuarios_procedimientos.sql) | Aplicado y contrastado con el servidor. |
-| [04: negocio y auditoría](sql/ajustes/04_lote_B_negocio_procedimientos.sql) | Aplicado y contrastado con el servidor. |
-| [Completar dependencias](sql/completar_dependencias.sql) | Crea la secuencia de códigos únicamente si falta; en el servidor verificado ya existía. |
-| [Diagnóstico](sql/diagnostico_dependencias.sql) | Lectura de metadatos, conteos y permisos. |
-| [Validación](sql/validar_dependencias.sql) | Comprueba dependencias y ejecuta el verificador CLR sin modificar datos. |
-| [Inventario SQL](docs/info_bd/script_InventarioBD.sql) | Consulta columnas, FK, procedimientos y triggers. |
-
-Las herramientas de dependencias usan sqlcmd instalado y las credenciales DB_SETUP locales:
+## Comprobaciones
 
 ```powershell
-node --env-file=.env scripts/dependencias-db.mjs diagnostico
-node --env-file=.env scripts/dependencias-db.mjs validar
+npm test
+npm run demo:check
 npm run verify:hash
+node --env-file=.env scripts/dependencias-db.mjs validar
+npm audit --omit=dev
 ```
 
-verify:hash comprueba el generador con una clave ficticia mediante el CLR, sin consultar hashes almacenados ni modificar registros. Ninguna de estas herramientas realiza cargas masivas.
+Para probar el CRUD con SQL real usamos `npm run test:integration`. Este comando necesita la cuenta de mantenimiento con permiso para crear bases. Restaura la exportación en una base temporal, prepara otra para las pruebas y elimina únicamente las copias que creó. Comprueba los cambios y borrados, las restricciones por usuario, las existencias y los totales sin escribir registros de negocio en nuestra base compartida.
 
-## Pendientes
+Los resultados y el alcance de cada revisión están en [Estado del proyecto](docs/ESTADO_PROYECTO.md).
 
-1. Completar/verificar las credenciales de empleado y restringir permisos SQL por rol. En la última comprobación la cuenta cliente tenía db_owner y las credenciales de empleado estaban incompletas.
-2. Ejecutar ciclos CRUD reales en una base de pruebas: entradas inválidas, FK, dos clientes, stock, totales, rollback y concurrencia. Repetir desde ambos equipos.
-3. Completar los diez módulos A: Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia y Movimiento. Revisar ambos lotes entre compañeros.
-4. Realizar la carga masiva con SSMS y bcp, conservar originales y obtener evidencia por tabla. Acordar el efecto de triggers antes de importar para evitar doble contabilización.
-5. Preparar la exportación SSMS con estructura/datos, el Word/PDF de evidencias, los archivos de carga y el código reproducible.
-6. Confirmar con el docente la interpretación de API por tabla y la zona horaria de entrega. El reparto por lotes es el del inventario; su equilibrio y la revisión cruzada se acuerdan entre ambos.
+## Archivos que usamos
 
-## Entrega académica
+| Archivo o carpeta | Para qué lo conservamos |
+| --- | --- |
+| [Guía de la API](docs/API.md) | Login, permisos, consultas y ejemplos |
+| [Preparación de SQL Server](docs/INSTALACION_SQL.md) | Pasos para instalar la base en otro entorno |
+| [Inventario](docs/info_bd/INVENTARIO.md) | Tablas, relaciones y reparto del trabajo |
+| [Plan de cierre](docs/roadmap/ROADMAP.md) | Orden que seguimos para revisar y entregar |
+| [Revisión general](docs/AUDITORIA_GENERAL_2026-11-03.md) | Problemas encontrados y cómo los atendimos |
+| [Guía de Postman](docs/pruebas/DEMO_CRUD.md) | Recorrido de demostración del lote B |
+| [Exportación SQL](db/RepuestosAutomotrices.sql) | Estructura, datos, procedimientos, triggers, secuencia y permisos |
+| [Enunciado](docs/requeriemientos/Tarea%20programada%202.pdf) | Requisitos del curso |
 
-El enunciado indica miércoles 4 de noviembre de 2026, a más tardar las 9:00 a. m., en “entregable Proyecto 2” de Teams. No especifica zona horaria. La funcionalidad se prueba en clase y luego se revisa el código. El objetivo interno es tener el paquete revisado el 3 de noviembre.
+En `db/sql` conservamos los permisos, los cambios de campos opcionales y las herramientas de revisión. `DB_SETUP` se usa para mantenimiento y pruebas; la API no la utiliza para atender solicitudes.
 
-Entregar: script generado desde SSMS con estructura y datos, documento Word/PDF con evidencia de carga por tabla, archivos originales de carga y código de todas las APIs. La plantilla Markdown y los datos preexistentes no sustituyen la evidencia real.
+## Entrega
+
+El enunciado fija la entrega para el miércoles 4 de noviembre de 2026, a más tardar a las 9:00 a. m., en “entregable Proyecto 2” de Teams. No indica zona horaria.
+
+Reunimos la exportación con estructura y datos, los documentos de evidencias, los archivos originales de carga y el código de las APIs. La demostración se realiza con GraphQL durante la clase. El frontend queda para la siguiente etapa del curso.

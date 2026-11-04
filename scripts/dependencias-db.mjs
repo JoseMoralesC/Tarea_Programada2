@@ -51,7 +51,7 @@ const files = {
   aplicar: 'completar_dependencias.sql',
   validar: 'validar_dependencias.sql',
 };
-const file = path.join(root, 'sql', files[mode]);
+const file = path.join(root, 'db', 'sql', files[mode]);
 args.push('-i', file);
 const defaultSqlcmd = process.platform === 'win32'
   ? 'C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\180\\Tools\\Binn\\SQLCMD.EXE'

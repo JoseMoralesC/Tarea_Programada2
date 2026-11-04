@@ -15,6 +15,9 @@ IF EXISTS (
       AND referenced_server_name IS NULL AND referenced_database_name IS NULL
       AND referenced_entity_name NOT IN ('inserted', 'deleted')
       AND is_caller_dependent = 0
+      AND NOT EXISTS (SELECT 1 FROM sys.extended_properties ep
+                      WHERE ep.major_id = referencing_id
+                        AND ep.name = 'microsoft_database_tools_support' AND ep.value = 1)
 )
     THROW 51014, 'Hay referencias locales sin resolver; revisar el diagnostico.', 1;
 

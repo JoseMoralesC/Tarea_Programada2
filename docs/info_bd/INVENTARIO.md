@@ -1,12 +1,12 @@
-# Inventario de RepuestosAutomotrices
+# Inventario de nuestra base
 
-Modelo heredado de 23 tablas. Las columnas y relaciones se inventariaron el 26/10/2026; los conteos de filas corresponden al 22/10/2026 y no acreditan una carga académica. Los 34 SP originales son una referencia anterior a los ajustes posteriores, no el total actual.
+Trabajamos con 23 tablas de RepuestosAutomotrices. Cada una tiene sus operaciones GraphQL y sus procedimientos de consulta y mantenimiento. `sysdiagrams` pertenece a los diagramas de SSMS y no forma parte del modelo del proyecto.
 
-El estado vigente del código y los pendientes están en el [README](../../README.md); los contratos y permisos de la API, en [API.md](../API.md). SQL 03/04 fue aplicado por el usuario y se verificaron sus 22 procedimientos/parámetros y once consultas de solo lectura el 29/10/2026. Faltan ciclos CRUD reales y permisos restringidos.
+Conservamos aquí las claves, columnas y relaciones para revisar el trabajo de ambos lotes. El resultado actualizado de las pruebas está en [Estado del proyecto](../ESTADO_PROYECTO.md).
 
-## 1. Tablas, claves y dependencias
+## Tablas y relaciones
 
-El nivel indicado solo expresa el orden topológico de las FK. **No es una instrucción de importación**: antes de cargar, resolver los efectos de triggers sobre inventario, totales y auditoría. No cargar simultáneamente un saldo final y sus operaciones históricas sin conciliación.
+El nivel indicado solo expresa el orden topológico de las FK. Para cargar datos también tenemos en cuenta cómo cambian las existencias y los totales. Evitamos sumar dos veces los saldos y las operaciones que los originaron.
 
 | Esquema.Tabla | PK (int) | FK: columna → tabla | Identity | Nivel FK | Filas observadas |
 | --- | --- | --- | --- | ---: | ---: |
@@ -34,9 +34,9 @@ El nivel indicado solo expresa el orden topológico de las FK. **No es una instr
 | dbo.Usuario | IdUsuario | IdRol → Rol | Sí | 2 | 6 |
 | dbo.Venta | IdVenta | IdCotizacion → Cotizacion; IdEmpleado → Empleado | Sí | 6 | 3 |
 
-Total de filas de referencia: **105**, ya existentes; no fueron cargadas por esta asistencia. RepuestoModelo tiene PK compuesta (IdRepuesto, IdModelo). Inventario dispone de unicidad por bodega/repuesto.
+Los conteos de esta tabla corresponden al inventario inicial del 22 de octubre; los conservamos como referencia histórica, no como conteos actuales. RepuestoModelo tiene PK compuesta (IdRepuesto, IdModelo). Inventario dispone de unicidad por bodega/repuesto.
 
-### 1.1 Columnas y tipos
+### Columnas y tipos
 
 Obtenido con la consulta 1 de [script_InventarioBD.sql](script_InventarioBD.sql) el 26/10/2026. `NULL` indica columna opcional; el resto es obligatoria. Se excluye `sysdiagrams`, creada por SSMS para diagramas.
 
@@ -66,9 +66,9 @@ Obtenido con la consulta 1 de [script_InventarioBD.sql](script_InventarioBD.sql)
 | Usuario | IdUsuario int, IdRol int, Correo varchar(100), Contrasena varchar(255), Activo bit |
 | Venta | IdVenta int, IdCotizacion int, IdEmpleado int, Fecha datetime, Total decimal(12,2) |
 
-### 1.2 Triggers y efecto en la carga
+### Reglas que se ejecutan al cambiar datos
 
-Obtenido con la consulta 4 de [script_InventarioBD.sql](script_InventarioBD.sql). Los contratos y triggers del lote B se contrastaron con el servidor el 29/10/2026. Revisar el resto antes de la carga.
+Obtenido con la consulta 4 de [script_InventarioBD.sql](script_InventarioBD.sql). Mantenemos estas reglas para actualizar los saldos y revisar que las relaciones sean correctas.
 
 | Trigger | Tabla | Función | Efecto en la carga masiva |
 | --- | --- | --- | --- |
@@ -88,55 +88,17 @@ Obtenido con la consulta 4 de [script_InventarioBD.sql](script_InventarioBD.sql)
 
 Antes de importar, comprobar si la herramienta dispara triggers y cómo se concilian existencias, totales y auditoría.
 
-## 2. Procedimientos y cobertura GraphQL
+## Reparto y procedimientos
 
-Los mantenimientos siguen el nombre dbo.Mantenimiento<Tabla>, con @function=1 para agregar, 2 para modificar y 3 para borrar. Las consultas específicas son las siguientes. El código implementado tiene cuatro operaciones por tabla; la columna de estado no acredita pruebas CRUD reales.
+| Lote | Tablas que agrupamos |
+| --- | --- |
+| A | Categoria, Marca, Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia y Movimiento |
+| B | Rol, Usuario, Empleado, Aseguradora, Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio y Auditoria |
 
-| Tabla | Lote | Consulta específica | GraphQL |
-| --- | --- | --- | --- |
-| Categoria | A | ConsultarCategorias | Implementado; SQL simulado |
-| Marca | A | ConsultarMarcas | Implementado; SQL simulado |
-| Modelo | A | ConsultarModelos | Módulo pendiente |
-| Repuesto | A | ConsultarRepuestos | Módulo pendiente |
-| RepuestoModelo | A | ConsultarRepuestoModelo | Módulo pendiente |
-| Bodega | A | ConsultarBodegas | Módulo pendiente |
-| Proveedor | A | ConsultarProveedores | Módulo pendiente |
-| Inventario | A | ConsultarInventario | Módulo pendiente |
-| Compra | A | ConsultarCompras | Módulo pendiente |
-| DetalleCompra | A | ConsultarDetalleCompra | Módulo pendiente |
-| Incidencia | A | ConsultarIncidencias | Módulo pendiente |
-| Movimiento | A | ConsultarMovimientos | Módulo pendiente |
-| Rol | B | ConsultarRoles | Implementado; SQL simulado |
-| Usuario | B | ConsultarUsuarios | Implementado; SQL simulado |
-| Empleado | B | ConsultarEmpleados | Implementado; SQL simulado |
-| Aseguradora | B | ConsultarAseguradoras | Implementado; SQL simulado |
-| Caso | B | ConsultarCasos | Implementado; SQL simulado |
-| Cotizacion | B | ConsultarCotizaciones | Implementado; SQL simulado |
-| DetalleCotizacion | B | ConsultarDetallesCotizacion | Implementado; SQL simulado |
-| Venta | B | ConsultarVentas | Implementado; SQL simulado |
-| DetalleVenta | B | ConsultarDetallesVenta | Implementado; SQL simulado |
-| Envio | B | ConsultarEnvios | Implementado; SQL simulado |
-| Auditoria | B | ConsultarAuditorias | Implementado; SQL simulado |
+Uno de nosotros se encargó del lote A y el otro del B; ambos participamos en las revisiones y en el cierre. El lote A reúne 48 operaciones y el B 44, para un total de 92.
 
-Categoria y Marca suman ocho operaciones A; las once tablas B suman 44. Total: 52/92 operaciones implementadas. Los demás módulos A siguen pendientes.
+Usamos `Mantenimiento<Tabla>` para agregar, modificar y borrar, con los valores 1, 2 y 3 del parámetro `function`. Cada tabla tiene una consulta específica. En DetalleCompra y RepuestoModelo usamos `ConsultarDetalleCompra` y `ConsultarRepuestoModelo`; en los detalles del lote B usamos `ConsultarDetallesCotizacion` y `ConsultarDetallesVenta`.
 
-ConsultarDatos es administrativo y usa SELECT *; la API no lo expone. ObtenerCredencialLogin es interno y no debe publicar hashes. La API usa LoginUsuario para validar la clave y obtener un perfil coherente. La secuencia SecuenciaCodigoRepuesto y el verificador CLR se comprobaron; ver las [herramientas de mantenimiento](../../README.md#scripts-sql).
+Conservamos las definiciones completas en [la exportación SQL](../../db/RepuestosAutomotrices.sql). Los permisos están en [05_permisos_api.sql](../../db/sql/05_permisos_api.sql) y los cambios para campos opcionales en [06_campos_opcionales.sql](../../db/sql/06_campos_opcionales.sql).
 
-Los ajustes A están en [Nuevos_Y_Modificacion_SP.sql](../../scripts/Nuevos_Y_Modificacion_SP.sql), con aplicación reportada por persona 1. Los B están en [03](../../sql/ajustes/03_lote_B_usuarios_procedimientos.sql) y [04](../../sql/ajustes/04_lote_B_negocio_procedimientos.sql), aplicados y contrastados. Estos scripts requieren la estructura heredada del proyecto 1.
-
-## 3. Reparto y dependencias entre compañeros
-
-| Responsable | Lote | Tablas | Revisor |
-| --- | --- | --- | --- |
-| Persona 1 | A | Categoria, Marca, Modelo, Repuesto, RepuestoModelo, Bodega, Proveedor, Inventario, Compra, DetalleCompra, Incidencia, Movimiento | Persona 2 |
-| Persona 2 | B | Rol, Usuario, Empleado, Aseguradora, Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio, Auditoria | Persona 1 |
-
-El reparto original preveía 48 puntos por persona incluyendo pruebas, documentación y revisión. La cantidad de tablas no mide por sí sola el esfuerzo; acordar entre ambos cualquier reasignación y revisión cruzada, sin dar por aceptadas tareas que aún carecen de evidencia.
-
-Movimiento necesita Empleado; Caso necesita Modelo; los detalles de cotización/venta necesitan Repuesto y la venta necesita Bodega. Los niveles FK de la tabla técnica sirven de referencia, pero el orden de carga también depende de triggers y saldos conciliados. No cargar a la vez un saldo final de inventario y las operaciones que lo reconstruyen sin controlar sus efectos.
-
-## 4. Carga y evidencia pendientes
-
-Para cada una de las 23 tablas registrar archivo/hoja/formato, herramienta, conteos antes/después, validación de PK/FK y capturas de resultado. Usar SSMS y bcp al menos una vez cada uno, conservar los originales y preparar el Word/PDF con la [plantilla de evidencias](../PLANTILLA_EVIDENCIAS.md).
-
-Acordar el tratamiento de identity, NULL, codificación, restricciones y triggers antes de importar. No ejecutar una propuesta de vaciado de datos como parte de estas verificaciones. Los datos preexistentes y los scripts de ajustes no sustituyen la carga documentada.
+Las evidencias de carga existentes se dan por suficientes. Para instalar y comprobar una copia seguimos [la guía SQL](../INSTALACION_SQL.md).
