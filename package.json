@@ -14,6 +14,8 @@
   },
   "scripts": {
     "test": "node --test",
+    "demo:generate": "node scripts/generar-demo-postman.mjs",
+    "demo:check": "node scripts/validar-demo-postman.mjs",
     "verify:hash": "node --env-file=.env scripts/verificar-hash.mjs",
     "start": "node --env-file=.env src/index.js",
     "dev": "node --env-file=.env --watch src/index.js"
