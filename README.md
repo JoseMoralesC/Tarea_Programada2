@@ -38,6 +38,7 @@ La implementación y las pruebas locales no acreditan todavía los ciclos CRUD r
 | [Roadmap](docs/roadmap/ROADMAP.md) | Plan de fases, responsables y puntos; sus estados iniciales son históricos. |
 | [Inventario](docs/info_bd/INVENTARIO.md) | Tablas, columnas, relaciones, triggers y reparto por lote. |
 | [Colección Postman](docs/pruebas/lote_B.postman_collection.json) | 44 operaciones B, login/logout y comprobaciones de ausencia; sin credenciales reales. |
+| [Demo CRUD automatizada](docs/pruebas/DEMO_CRUD.md) | Nueva colección con datos únicos, IDs encadenados, comprobación de cambios/totales y limpieza por dependencias. Configuración y límites en la guía. |
 | [Enunciado original](docs/requeriemientos/Tarea%20programada%202.pdf) | Requisitos académicos. |
 | [Plantilla de evidencias](docs/PLANTILLA_EVIDENCIAS.md) | Preparación del documento Word/PDF de carga. |
 
