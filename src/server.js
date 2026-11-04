@@ -4,6 +4,8 @@ import {crearSesiones} from './auth/sesiones.js';
 import * as autenticacion from './modules/autenticacion.js';
 import * as categoria from './modules/categoria.js';
 import * as marca from './modules/marca.js';
+import * as bodega from './modules/bodega.js';
+import * as proveedor from './modules/proveedor.js';
 import * as rol from './modules/rol.js';
 import * as usuario from './modules/usuario.js';
 import * as empleado from './modules/empleado.js';
@@ -16,6 +18,14 @@ import * as venta from './modules/venta.js';
 import * as detalleVenta from './modules/detalleVenta.js';
 import * as envio from './modules/envio.js';
 import * as auditoria from './modules/auditoria.js';
+import * as modelo from './modules/modelo.js';
+import * as repuesto from './modules/repuesto.js';
+import * as repuestoModelo from './modules/repuestoModelo.js';
+import * as inventario from './modules/inventario.js';
+import * as compra from './modules/compra.js';
+import * as detalleCompra from './modules/detalleCompra.js';
+import * as incidencia from './modules/incidencia.js';
+import * as movimiento from './modules/movimiento.js';
 
 export function crearServidor({
     obtenerPool,
@@ -24,8 +34,9 @@ export function crearServidor({
     genericoHabilitado = false,
     sesiones = crearSesiones(),
 }) {
-    const modulos = [scalars, categoria, marca, rol, usuario, empleado, aseguradora,
-        caso, cotizacion, detalleCotizacion, venta, detalleVenta, envio, auditoria];
+    const modulos = [scalars, categoria, marca, bodega, proveedor, modelo, repuesto, repuestoModelo,
+    inventario, compra, detalleCompra, incidencia, movimiento,
+    rol, usuario, empleado, aseguradora, caso, cotizacion, detalleCotizacion, venta, detalleVenta, envio, auditoria];
     const server = new ApolloServer({
         typeDefs: [autenticacion.typeDefs, ...modulos.map(modulo => modulo.typeDefs)],
         resolvers: [

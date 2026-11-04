@@ -3,6 +3,7 @@ import {cargarConfig} from './config.js';
 import {crearGestorPools} from './db.js';
 import {crearServidor} from './server.js';
 
+
 const config = cargarConfig();
 const gestor = crearGestorPools(config);
 const {server, context} = crearServidor({...gestor, ...config});
