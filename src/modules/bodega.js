@@ -1,7 +1,5 @@
-import { sql } from '../db.js';
-import { poolAutorizado } from '../auth/contexto.js';
+import {crearCrudCatalogo} from './crud-catalogo.js';
 
-// Schema: el contrato de Bodega
 export const typeDefs = `#graphql
   type Bodega {
     IdBodega: Int!
@@ -20,48 +18,26 @@ export const typeDefs = `#graphql
   }
 `;
 
-// Bodega es información interna: solo administrador y empleado
-const ROLES = ['ADMINISTRADOR', 'EMPLEADO'];
-
-// Resolvers: cada operación llama a su SP
-export const resolvers = {
-  Query: {
-    // Sin idBodega devuelve todas; con idBodega devuelve solo esa
-    bodegas: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      const resultado = await pool.request()
-        .input('IdBodega', sql.Int, args.idBodega ?? null)
-        .execute('ConsultarBodegas');
-      return resultado.recordset;
+export const resolvers = crearCrudCatalogo({
+    "nombre": "Bodega",
+    "consulta": "bodegas",
+    "campos": {
+        "Nombre": {
+            "tipo": "texto",
+            "limite": 60,
+            "unicode": true
+        },
+        "Ubicacion": {
+            "tipo": "texto",
+            "limite": 150,
+            "unicode": true
+        }
     },
-  },
-  Mutation: {
-    agregarBodega: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      const resultado = await pool.request()
-        .input('function', sql.Int, 1)
-        .input('Nombre', sql.NVarChar(60), args.nombre)
-        .input('Ubicacion', sql.NVarChar(150), args.ubicacion)
-        .execute('MantenimientoBodega');
-      return resultado.recordset[0].IdBodega;
-    },
-    modificarBodega: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      await pool.request()
-        .input('function', sql.Int, 2)
-        .input('IdBodega', sql.Int, args.idBodega)
-        .input('Nombre', sql.NVarChar(60), args.nombre ?? null)
-        .input('Ubicacion', sql.NVarChar(150), args.ubicacion ?? null)
-        .execute('MantenimientoBodega');
-      return true;
-    },
-    borrarBodega: async (_, args, contexto) => {
-      const pool = await poolAutorizado(contexto, ROLES);
-      await pool.request()
-        .input('function', sql.Int, 3)
-        .input('IdBodega', sql.Int, args.idBodega)
-        .execute('MantenimientoBodega');
-      return true;
-    },
-  },
-};
+    "requeridos": [
+        "Nombre",
+        "Ubicacion"
+    ],
+    "filtros": [
+        "IdBodega"
+    ]
+});

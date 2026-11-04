@@ -35,9 +35,9 @@ export function crearContexto({sesiones, obtenerPool, genericoHabilitado = false
     };
 }
 
-export function poolAutorizado(contexto, rolesPermitidos, permitirGenerico = false) {
+export function autorizar(contexto, rolesPermitidos, permitirGenerico = false) {
     if (!contexto?.identidad) {
-        if (permitirGenerico && contexto?.genericoHabilitado) return contexto.obtenerPool();
+        if (permitirGenerico && contexto?.genericoHabilitado) return;
         throw new GraphQLError('Debes iniciar sesión', {extensions: {code: 'UNAUTHENTICATED'}});
     }
     if (!rolesPermitidos.includes(contexto.identidad.rol)) {
@@ -45,5 +45,9 @@ export function poolAutorizado(contexto, rolesPermitidos, permitirGenerico = fal
             extensions: {code: 'FORBIDDEN'},
         });
     }
+}
+
+export function poolAutorizado(contexto, rolesPermitidos, permitirGenerico = false) {
+    autorizar(contexto, rolesPermitidos, permitirGenerico);
     return contexto.obtenerPool();
 }

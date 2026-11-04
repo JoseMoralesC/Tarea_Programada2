@@ -1,56 +1,40 @@
-# Demo CRUD del lote B en Postman
+# Recorrido de demostración en Postman
 
-Importar `demo_crud_B.postman_collection.json` como una coleccion nueva: **Demo CRUD B - Dependencias automaticas**. La coleccion anterior y sus modificaciones en Postman no se sustituyen. No hay contrasenas ni tokens reales en el archivo generado.
+Preparamos `demo_crud_B.postman_collection.json` para mostrar el funcionamiento de las once tablas del lote B. La colección genera datos de prueba, guarda los IDs y permite consultar los cambios antes de borrar lo que creó.
 
-## Preparacion
+## Antes de comenzar
 
-1. Iniciar la API con `npm start` y verificar que las cuentas SQL tienen los permisos de `sql/05_permisos_api.sql`.
-2. Ejecutar `sql/07_referencias_demo.sql` en SSMS. Elegir una fila con existencias de al menos dos unidades. Guardar el stock inicial de esa bodega/repuesto.
-3. En las variables de la nueva coleccion, completar `baseUrl`, `correoLogin` y `claveLogin` con una cuenta **Administrador**. Usar valores locales; no exportar ni compartir la coleccion con secretos guardados.
-4. Copiar los tres IDs de UNA fila del SQL a `idModeloReferencia`, `idRepuestoReferencia` e `idBodegaReferencia`. Se requieren porque los modulos GraphQL A de esas tablas aun no estan integrados. No se modifican los registros de modelo, repuesto ni bodega.
-5. No configurar variables globales o de entorno con los mismos nombres que las de esta coleccion. No editar los IDs `idDemo...` ni `demoCreados`: son el registro usado para limitar la limpieza a las altas de esta ejecucion.
+1. Iniciamos la API con `npm start` y usamos una base de pruebas con los permisos de `db/sql/05_permisos_api.sql` y los cambios de `db/sql/06_campos_opcionales.sql`.
+2. Ejecutamos `db/sql/07_referencias_demo.sql` en SSMS. Elegimos una fila con al menos dos unidades disponibles y anotamos sus tres IDs y el stock inicial.
+3. Importamos la colección y completamos `baseUrl`, `correoLogin` y `claveLogin` con una cuenta administrador de esa base.
+4. Copiamos los IDs a `idModeloReferencia`, `idRepuestoReferencia` e `idBodegaReferencia`. Usamos referencias existentes para concentrar esta demostración en el lote B; los módulos A ya están integrados.
 
-Se puede generar de nuevo el JSON ejecutando `npm run demo:generate`; eso no modifica la copia ya importada en Postman.
+Guardamos las credenciales como valores locales y no compartimos una exportación con claves o tokens. Dejamos que la colección administre los IDs `idDemo...` y `demoCreados`.
 
-## Ejecucion manual o automatica
+## Orden que seguimos
 
-Para mostrar los pasos, abrir las carpetas **00 a 06 en orden** y enviar las solicitudes de arriba hacia abajo con Send. No es necesario editar los Body. Mantener los scripts Before request y After response de esta coleccion: resuelven las variables del Body visible y comprueban los resultados.
+Podemos enviar las solicitudes manualmente, de arriba hacia abajo, o usar Run con todas las carpetas y una sola iteración. Conservamos los scripts que preparan las variables y revisan las respuestas.
 
-Para ejecutar todo, usar Run de la coleccion, seleccionar todas las solicitudes en su orden original, **una iteracion**, y ejecutar. Un error detiene el Runner; en modo manual, detenerse tambien y revisar antes de enviar operaciones dependientes.
-
-| Carpeta | Resultado |
+| Carpeta | Qué mostramos |
 | --- | --- |
-| 00 | Login administrador; guardar token. Se puede repetir para renovar la sesion sin perder los IDs creados. |
-| 01 | Validar referencias positivas, obtener IDs de roles por su nombre y generar sufijo, correos, fechas y clave de prueba. No comprueba existencia ni stock de las referencias: se revisan con el SQL. |
-| 02 | Intentar un nombre de Rol no admitido; `CONFLICT` es el resultado esperado. |
-| 03 | Crear dos Usuarios, Empleado, Aseguradora, Caso, Cotizacion, DetalleCotizacion, Venta, DetalleVenta, Envio y Auditoria. Consultar cada alta y comprobar totales de 10.00. |
-| 04 | Modificar y volver a consultar cada registro para comprobar persistencia; cantidades de los detalles pasan de uno a dos y los totales deben ser 20.00. |
-| 05 | Borrar hijos antes de padres y comprobar ausencia. Solo se usan IDs registrados como creados en esta ejecucion. |
-| 06 | Cerrar sesion y comprobar que no queden registros registrados como activos. |
+| 00 | Inicio de sesión del administrador |
+| 01 | Referencias, roles y datos de esta ejecución |
+| 02 | Rechazo de un nombre de rol que la base no permite |
+| 03 | Altas y consultas; los totales comienzan en 10.00 |
+| 04 | Cambios y consultas; los detalles pasan a dos unidades y los totales a 20.00 |
+| 05 | Borrado de hijos antes de padres y comprobación de ausencia |
+| 06 | Cierre de sesión y revisión de la limpieza |
 
-No repetir Agregar tras un alta correcta. Cada ejecucion genera datos distintos, y otra preparacion queda bloqueada si el registro local indica que hay altas pendientes de limpiar. Completar la limpieza antes de iniciar otra demo.
+No repetimos un alta que ya tuvo éxito. Si aparece un fallo, detenemos el recorrido, conservamos las variables y corregimos la causa. Si venció la sesión, repetimos solo el login. Después ejecutamos la carpeta 05 para limpiar los registros creados y terminamos con la 06.
 
-## Recuperacion de un fallo
+Si se pierde una respuesta por un corte de red, revisamos los registros por el sufijo `demoRun` antes de intentar el alta otra vez. Al terminar comparamos las existencias con el valor inicial. Podemos consultarlas mediante la query `inventario` o con el SQL de referencias.
 
-1. Conservar las variables de la coleccion, especialmente `demoRun`, `demoCreados` y todos los `idDemo...`. No reimportar ni iniciar otra preparacion.
-2. Corregir la causa: permisos, referencia inexistente, stock o servidor apagado. Si vencio la sesion, ejecutar solo la carpeta 00 para obtener otro token de administrador.
-3. Ejecutar la carpeta **05 - Limpieza** completa. Omite los registros que no se llegaron a crear o que ya se borraron. Si un borrado falla, se detiene: revisar el error antes de continuar.
-4. Ejecutar 06. Despues puede iniciarse otra demo completa desde 00.
+La limpieza devuelve las existencias consumidas por los detalles de venta. Los números identity avanzan y las auditorías automáticas permanecen, por lo que no esperamos que todos los valores internos vuelvan exactamente al estado anterior.
 
-Si una respuesta de alta se pierde por una interrupcion de red, el servidor podria haber insertado el registro sin que Postman recibiera el ID. No repetir a ciegas: consultar los datos por el sufijo `demoRun` con mantenimiento y conciliar los IDs antes de continuar. La demo no es una transaccion unica ni puede garantizar limpieza ante un corte de red.
+## Qué cubre cada comprobación
 
-## Alcance y evidencia
+Esta colección se concentra en el lote B. El rol tiene una consulta y un rechazo esperado porque los tres nombres permitidos ya existen en la base habitual. Para probar también su alta, cambio y borrado positivos usamos una copia vacía en `npm run test:integration`.
 
-Esta coleccion realiza escrituras reales. Usarla preferiblemente en una copia de pruebas, sin otros usuarios cambiando las existencias durante el recorrido. DetalleVenta consume una unidad al crear y otra al modificar; su borrado devuelve las dos segun el trigger exportado. Reejecutar el SQL de referencias al terminar y comparar el stock. La coleccion aun no puede consultar Inventario mediante GraphQL, por lo que esa comprobacion no es automatica.
+`npm run demo:check` comprueba la colección y sus scripts con respuestas simuladas. El ensayo de integración prueba las 23 tablas con SQL real e incluye separación entre clientes, campos vacíos, stock, totales y concurrencia de ventas.
 
-Los triggers pueden dejar nuevas filas de auditoria y los identity avanzan aunque luego se borren registros. La limpieza elimina los registros de negocio propios de la demo y la Auditoria creada explicitamente; **no restaura el estado exacto anterior ni elimina auditorias automaticas**.
-
-Rol tiene consulta y rechazo esperado; no se acredita su CRUD positivo completo porque CHECK solo admite Administrador/Empleado/Cliente y los tres ya existen. No se cambian esos roles ni sus restricciones. La coleccion no acredita los diez modulos A pendientes, aislamiento entre dos clientes ni concurrencia. Las pruebas anteriores de autenticacion y restricciones son complementarias.
-
-Guardar capturas del alta, consulta, cambio persistido, borrado, ausencia y totales. Ocultar claves y tokens, incluida la clave temporal que resuelve el script antes de enviar los Usuarios. Las evidencias de CRUD no sustituyen las evidencias academicas de carga con SSMS/bcp.
-
-## Validacion local del archivo
-
-`npm run demo:check` comprueba documentos y variables contra el esquema GraphQL, ejecuta los scripts Postman con respuestas simuladas y verifica encadenamiento, limpieza parcial, IDs ajenos y parada ante fallo. No se conecta a SQL. Las pruebas reales se realizan importando el JSON en Postman.
-
-Los scripts utilizan las funciones documentadas de [control de ejecucion de Postman](https://learning.postman.com/docs/tests-and-scripts/write-scripts/postman-sandbox-reference/pm-execution) para omitir solicitudes sin registros pendientes y detener el recorrido ante errores.
+Si necesitamos regenerar el JSON usamos `npm run demo:generate` y lo importamos de nuevo. Conservamos las evidencias que ya reunimos; esta guía organiza la demostración y no exige repetir las capturas de carga.

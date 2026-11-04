@@ -1,7 +1,5 @@
-import {sql} from '../db.js';
-import {poolAutorizado} from '../auth/contexto.js';
+import {crearCrudCatalogo} from './crud-catalogo.js';
 
-//schema: el contrato de categoria 
 export const typeDefs = `#graphql
     type Categoria {
     IdCategoria: Int!
@@ -18,43 +16,19 @@ export const typeDefs = `#graphql
     }
 `;
 
-//Resolvers
-export const resolvers = {
-    Query: {
-        categorias: async(_, __, contexto) => {
-            const pool = await poolAutorizado(contexto, ['ADMINISTRADOR', 'EMPLEADO', 'CLIENTE'], true);
-            const resultado = await pool.request().execute('ConsultarCategorias');
-            return resultado.recordset.map((fila) => ({
-                IdCategoria: fila.Id,
-                Nombre: fila.Nombre,
-            }));
-        },
+export const resolvers = crearCrudCatalogo({
+    "nombre": "Categoria",
+    "consulta": "categorias",
+    "campos": {
+        "Nombre": {
+            "tipo": "texto",
+            "limite": 60,
+            "unicode": true
+        }
     },
-Mutation: {
-    agregarCategoria: async(_, args, contexto) => {
-        const pool = await poolAutorizado(contexto, ['ADMINISTRADOR', 'EMPLEADO']);
-        const resultado = await pool.request()
-        .input('function', sql.Int, 1)
-        .input('Nombre', sql.NVarChar(60), args.nombre)
-        .execute('MantenimientoCategoria');
-        return resultado.recordset[0].IdCategoria;
-    },
-    modificarCategoria: async(_,args, contexto) => {
-        const pool = await poolAutorizado(contexto, ['ADMINISTRADOR', 'EMPLEADO']);
-        await pool.request()
-        .input('function', sql.Int, 2)
-        .input('IdCategoria', sql.Int, args.idCategoria)
-        .input('Nombre', sql.NVarChar(60), args.nombre)
-        .execute('MantenimientoCategoria');
-        return true;
-        },  
-    borrarCategoria: async(_,args, contexto) => {
-        const pool = await poolAutorizado(contexto, ['ADMINISTRADOR', 'EMPLEADO']);
-        await pool.request()
-        .input('function', sql.Int,3)
-        .input('IdCategoria', sql.Int, args.idCategoria)
-        .execute('MantenimientoCategoria');
-        return true;
-    }
-    },
-};
+    "requeridos": [
+        "Nombre"
+    ],
+    "publico": true,
+    "aliasId": true
+});

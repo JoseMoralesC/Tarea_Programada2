@@ -31,13 +31,17 @@ export async function ejecutarSP(request, procedimiento) {
     } catch (error) {
         const numeros = [error, ...(error.precedingErrors ?? [])]
             .map(detalle => detalle.number ?? detalle.originalError?.info?.number);
-        if (numeros.includes(51101)) {
+        if (numeros.some(numero => [51101, 50044].includes(numero))
+            || (numeros.includes(50000) && /Mantenimiento(?:Categoria|Marca|Modelo|Repuesto|Bodega|Proveedor|Inventario|Compra|DetalleCompra|Incidencia|Movimiento)$/.test(procedimiento)
+                && /no encontro/.test(error.message))) {
             throw new GraphQLError('El registro no existe', {extensions: {code: 'NOT_FOUND'}});
         }
-        if (numeros.some(numero => [51100, 51102, 8152, 2628, 8115].includes(numero))) {
+        if (numeros.some(numero => [51100, 51102, 50045, 8152, 2628, 8115].includes(numero))) {
             throw entradaInvalida('Los datos no cumplen el contrato de la operación');
         }
-        if (numeros.some(numero => [547, 2601, 2627, 50042, 51103, 1205].includes(numero))
+        if (numeros.some(numero => [547, 2601, 2627, 50042, 50043, 51103, 1205].includes(numero))
+            || (/Mantenimiento(?:DetalleCompra|Movimiento)$/.test(procedimiento)
+                && numeros.some(numero => [50000, 3609].includes(numero)))
             || (['dbo.MantenimientoDetalleVenta', 'dbo.MantenimientoEmpleado', 'dbo.MantenimientoAseguradora'].includes(procedimiento)
                 && numeros.some(numero => [50000, 3609].includes(numero)))) {
             throw new GraphQLError('La operación entra en conflicto con datos existentes o relacionados', {

@@ -1121,6 +1121,19 @@ ALTER TABLE [dbo].[Venta]  WITH CHECK ADD  CONSTRAINT [CK_Venta_Total] CHECK  ((
 GO
 ALTER TABLE [dbo].[Venta] CHECK CONSTRAINT [CK_Venta_Total]
 GO
+-- Conservamos la secuencia para que el archivo pueda recrear las dependencias.
+IF OBJECT_ID(N'dbo.SecuenciaCodigoRepuesto', N'SO') IS NULL
+BEGIN
+    DECLARE @InicioCodigo bigint;
+    SELECT @InicioCodigo = ISNULL(MAX(TRY_CONVERT(bigint, SUBSTRING(Codigo, 5, 30))), 0) + 1
+    FROM dbo.Repuesto
+    WHERE LEFT(Codigo, 4) = 'REP-'
+      AND SUBSTRING(Codigo, 5, 30) COLLATE Latin1_General_100_BIN2 NOT LIKE '%[^0-9]%';
+    DECLARE @CrearSecuencia nvarchar(max) = N'CREATE SEQUENCE dbo.SecuenciaCodigoRepuesto AS bigint START WITH '
+        + CONVERT(nvarchar(30), @InicioCodigo) + N' INCREMENT BY 1 MINVALUE 1 NO CYCLE NO CACHE;';
+    EXEC sys.sp_executesql @CrearSecuencia;
+END;
+GO
 /****** Object:  StoredProcedure [dbo].[ConsultarAseguradoras]    Script Date: 3/11/2026 18:09:12 ******/
 SET ANSI_NULLS ON
 GO
@@ -1998,7 +2011,7 @@ GO
 
 CREATE PROCEDURE [dbo].[MantenimientoCompra]
 (@function int, @IdCompra int = null, @IdProveedor int = null, @IdBodega int = null, @Fecha date = null,
- @FechaRecepcion date = null, @Total decimal(12,2) = null)
+ @FechaRecepcion date = null, @Total decimal(12,2) = null, @CambiarFechaRecepcion bit = 0)
 AS
 SET NOCOUNT ON;
 IF @function = 1 -- insert
@@ -2013,7 +2026,7 @@ BEGIN
         IdProveedor = ISNULL(@IdProveedor, IdProveedor),
         IdBodega = ISNULL(@IdBodega, IdBodega),
         Fecha = ISNULL(@Fecha, Fecha),
-        FechaRecepcion = ISNULL(@FechaRecepcion, FechaRecepcion),
+        FechaRecepcion = CASE WHEN @CambiarFechaRecepcion = 1 THEN @FechaRecepcion ELSE ISNULL(@FechaRecepcion, FechaRecepcion) END,
         Total = ISNULL(@Total, Total)
     WHERE IdCompra = @IdCompra;
     IF @@ROWCOUNT = 0
@@ -2348,7 +2361,7 @@ GO
 
 CREATE PROCEDURE [dbo].[MantenimientoIncidencia]
 (@function int, @IdIncidencia int = null, @IdRepuesto int = null, @IdProveedor int = null,
- @IdCompra int = null, @Tipo varchar(20) = null, @Cantidad int = null, @Fecha datetime = null)
+ @IdCompra int = null, @Tipo varchar(20) = null, @Cantidad int = null, @Fecha datetime = null, @CambiarIdCompra bit = 0)
 AS
 SET NOCOUNT ON;
 IF @function = 1 -- insert
@@ -2362,7 +2375,7 @@ BEGIN
     UPDATE Incidencia SET
         IdRepuesto = ISNULL(@IdRepuesto, IdRepuesto),
         IdProveedor = ISNULL(@IdProveedor, IdProveedor),
-        IdCompra = ISNULL(@IdCompra, IdCompra),
+        IdCompra = CASE WHEN @CambiarIdCompra = 1 THEN @IdCompra ELSE ISNULL(@IdCompra, IdCompra) END,
         Tipo = ISNULL(@Tipo, Tipo),
         Cantidad = ISNULL(@Cantidad, Cantidad),
         Fecha = ISNULL(@Fecha, Fecha)
@@ -2464,7 +2477,7 @@ GO
 
 CREATE PROCEDURE [dbo].[MantenimientoModelo]
 (@function int, @IdModelo int = null, @IdMarca int = null, @Nombre nvarchar(60) = null,
- @AnioInicio int = null, @AnioFin int = null)
+ @AnioInicio int = null, @AnioFin int = null, @CambiarAnioFin bit = 0)
 AS
 SET NOCOUNT ON;
 IF @function = 1 -- insert
@@ -2479,7 +2492,7 @@ BEGIN
         IdMarca = ISNULL(@IdMarca, IdMarca),
         Nombre = ISNULL(@Nombre, Nombre),
         AnioInicio = ISNULL(@AnioInicio, AnioInicio),
-        AnioFin = ISNULL(@AnioFin, AnioFin)
+        AnioFin = CASE WHEN @CambiarAnioFin = 1 THEN @AnioFin ELSE ISNULL(@AnioFin, AnioFin) END
     WHERE IdModelo = @IdModelo;
     IF @@ROWCOUNT = 0
     BEGIN
@@ -2506,7 +2519,7 @@ GO
 CREATE PROCEDURE [dbo].[MantenimientoMovimiento]
 (@function int, @IdMovimiento int = null, @IdRepuesto int = null, @IdBodegaOrigen int = null,
  @IdBodegaDestino int = null, @IdEmpleado int = null, @Tipo varchar(15) = null, @Cantidad int = null,
- @Fecha datetime = null)
+ @Fecha datetime = null, @CambiarIdBodegaOrigen bit = 0, @CambiarIdBodegaDestino bit = 0)
 AS
 SET NOCOUNT ON;
 IF @function = 1 -- insert
@@ -2519,8 +2532,8 @@ IF @function = 2 -- update
 BEGIN
     UPDATE Movimiento SET
         IdRepuesto = ISNULL(@IdRepuesto, IdRepuesto),
-        IdBodegaOrigen = ISNULL(@IdBodegaOrigen, IdBodegaOrigen),
-        IdBodegaDestino = ISNULL(@IdBodegaDestino, IdBodegaDestino),
+        IdBodegaOrigen = CASE WHEN @CambiarIdBodegaOrigen = 1 THEN @IdBodegaOrigen ELSE ISNULL(@IdBodegaOrigen, IdBodegaOrigen) END,
+        IdBodegaDestino = CASE WHEN @CambiarIdBodegaDestino = 1 THEN @IdBodegaDestino ELSE ISNULL(@IdBodegaDestino, IdBodegaDestino) END,
         IdEmpleado = ISNULL(@IdEmpleado, IdEmpleado),
         Tipo = ISNULL(@Tipo, Tipo),
         Cantidad = ISNULL(@Cantidad, Cantidad),
@@ -2550,7 +2563,7 @@ GO
 
 CREATE PROCEDURE [dbo].[MantenimientoProveedor]
 (@function int, @IdProveedor int = null, @Nombre nvarchar(100) = null, @Telefono varchar(15) = null,
- @Correo varchar(100) = null, @DiasEntrega int = null)
+ @Correo varchar(100) = null, @DiasEntrega int = null, @CambiarTelefono bit = 0, @CambiarCorreo bit = 0)
 AS
 SET NOCOUNT ON;
 IF @function = 1 -- insert
@@ -2563,8 +2576,8 @@ IF @function = 2 -- update
 BEGIN
     UPDATE Proveedor SET
         Nombre = ISNULL(@Nombre, Nombre),
-        Telefono = ISNULL(@Telefono, Telefono),
-        Correo = ISNULL(@Correo, Correo),
+        Telefono = CASE WHEN @CambiarTelefono = 1 THEN @Telefono ELSE ISNULL(@Telefono, Telefono) END,
+        Correo = CASE WHEN @CambiarCorreo = 1 THEN @Correo ELSE ISNULL(@Correo, Correo) END,
         DiasEntrega = ISNULL(@DiasEntrega, DiasEntrega)
     WHERE IdProveedor = @IdProveedor;
     IF @@ROWCOUNT = 0
@@ -3264,4 +3277,84 @@ END;
 
 GO
 ALTER TABLE [dbo].[Usuario] ENABLE TRIGGER [TR_Usuario_ValidarPerfil]
+GO
+
+GO
+-- Damos a cada conexi?n ?nicamente los procedimientos que utiliza la API.
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    IF DATABASE_PRINCIPAL_ID(N'rol_api_empleado') IS NULL THROW 51020, 'Falta el rol SQL esperado.', 1;
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCategorias] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarMarcas] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarModelos] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarRepuestos] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarRepuestoModelo] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarBodegas] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarProveedores] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarInventario] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCompras] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarDetalleCompra] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarIncidencias] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarMovimientos] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarRoles] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarUsuarios] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarEmpleados] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarAseguradoras] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCasos] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCotizaciones] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarDetallesCotizacion] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarVentas] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarDetallesVenta] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarEnvios] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarAuditorias] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoCategoria] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoMarca] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoModelo] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoRepuesto] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoRepuestoModelo] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoBodega] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoProveedor] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoInventario] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoCompra] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoDetalleCompra] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoIncidencia] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoMovimiento] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoRol] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoUsuario] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoEmpleado] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoAseguradora] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoCaso] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoCotizacion] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoDetalleCotizacion] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoVenta] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoDetalleVenta] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoEnvio] TO [rol_api_empleado];
+    GRANT EXECUTE ON OBJECT::dbo.[MantenimientoAuditoria] TO [rol_api_empleado];
+    IF DATABASE_PRINCIPAL_ID(N'rol_api_cliente') IS NULL THROW 51020, 'Falta el rol SQL esperado.', 1;
+    GRANT EXECUTE ON OBJECT::dbo.[LoginUsuario] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCategorias] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarMarcas] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarModelos] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarRepuestoModelo] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarUsuarios] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarAseguradoras] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCasos] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCotizaciones] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarDetallesCotizacion] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarVentas] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarDetallesVenta] TO [rol_api_cliente];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarEnvios] TO [rol_api_cliente];
+    IF DATABASE_PRINCIPAL_ID(N'rol_api_generico') IS NULL THROW 51020, 'Falta el rol SQL esperado.', 1;
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarCategorias] TO [rol_api_generico];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarMarcas] TO [rol_api_generico];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarModelos] TO [rol_api_generico];
+    GRANT EXECUTE ON OBJECT::dbo.[ConsultarRepuestoModelo] TO [rol_api_generico];
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
 GO
