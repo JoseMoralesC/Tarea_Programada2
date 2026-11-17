@@ -1,0 +1,10 @@
+101;Repuestos del Pacifico S.A.;2661-4410;ventas@repacifico.cr;5
+102;AutoPartes Importadas CR;2224-7781;pedidos@apimportadas.cr;7
+103;Distribuidora Carroceria Total;2551-3020;info@carroceriatotal.cr;3
+104;Iluminacion Automotriz Ltda;2440-9915;ventas@iluminauto.cr;6
+105;Partes Originales Japon;2296-1188;contacto@pojapon.cr;10
+106;Comercial Guardabarros CR;2573-6642;ventas@guardabarros.cr;4
+107;Mega Repuestos Centroamerica;2105-3377;pedidos@megarepuestos.com;8
+108;Radiadores y Enfriamiento S.A.;2253-8090;ventas@radiadorescr.com;5
+109;Global Auto Supply;2208-4455;orders@globalautosupply.com;12
+110;Importadora Panamericana;2758-2201;compras@impanamericana.cr;9

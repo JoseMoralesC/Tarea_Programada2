@@ -1,0 +1,11 @@
+IdRepuesto;IdCategoria;Codigo;Nombre;PrecioVenta;Costo;Activo
+101;101;RP-101;Bumper delantero Mazda 3;85000;52000;True
+102;102;RP-102;Bumper trasero Mazda CX-5;92000;58000;True
+103;103;RP-103;Faro delantero izquierdo Kia Rio;64000;38000;True
+104;104;RP-104;Stop trasero derecho Kia Sportage;48000;27000;True
+105;105;RP-105;Guardabarros delantero derecho Honda Civic;56000;33000;True
+106;106;RP-106;Capo Honda CR-V;145000;96000;True
+107;107;RP-107;Retrovisor izquierdo Mitsubishi L200;39000;21000;True
+108;108;RP-108;Parrilla delantera Suzuki Swift;42000;24000;True
+109;109;RP-109;Radiador Ford Ranger;118000;74000;True
+110;110;RP-110;Puerta delantera izquierda Chevrolet Spark;165000;112000;True

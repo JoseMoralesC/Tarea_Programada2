@@ -1,0 +1,10 @@
+101;Bodega Central Cartago;El Carmen, Cartago
+102;Bodega San Jose;La Uruca, San Jose
+103;Bodega Alajuela;El Coyol, Alajuela
+104;Bodega Heredia;Barreal, Heredia
+105;Bodega Liberia;Centro, Liberia, Guanacaste
+106;Bodega Puntarenas;El Roble, Puntarenas
+107;Bodega Limon;Moin, Limon
+108;Bodega Perez Zeledon;San Isidro, Perez Zeledon
+109;Bodega San Carlos;Ciudad Quesada, San Carlos
+110;Bodega Paraiso;Centro, Paraiso, Cartago

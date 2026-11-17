@@ -1,0 +1,10 @@
+101;Bumper Delantero
+102;Bumper Trasero
+103;Faro Delantero
+104;Stop Trasero
+105;Guardabarros
+106;Capo
+107;Retrovisor
+108;Parrilla
+109;Radiador
+110;Puerta
